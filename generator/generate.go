@@ -289,14 +289,11 @@ func (gen *Generator) genUnmarshal(g *protogen.GeneratedFile, m *protogen.Messag
 
 func (gen *Generator) genBytesParser(g *protogen.GeneratedFile, m *protogen.Message, f field, identifier string) {
 
-	sizeFieldName := "size_" + f.GoName
-	g.P("var ", sizeFieldName, " int32")
-
 	if f.Opts.GetSizeField() != 0 {
-		g.P(sizeFieldName, " = x.Get", getMessageFields(m).FindByNumber(f.Opts.GetSizeField()).GoName, "()")
+		g.P(identifier, " = make([]byte, x.Get", getMessageFields(m).FindByNumber(f.Opts.GetSizeField()).GoName, "())")
 	}
 
-	g.P("if err:= ", g.QualifiedGoIdent(parseBytes), "(reader, int(", sizeFieldName, "), ", identifier, "); err != nil {")
+	g.P("if err:= ", g.QualifiedGoIdent(parseBytes), "(reader,", identifier, "); err != nil {")
 	g.P("return err")
 	g.P("}")
 
@@ -307,13 +304,13 @@ func (gen *Generator) genEnumParser(g *protogen.GeneratedFile, m *protogen.Messa
 	//g.P("// decode ", f.Descriptor.Enum().FullName())
 	//log.Println(f.Descriptor.Enum().FullName())
 
-	log.Println(gen.ObjectNamed(string(f.Descriptor.Enum().FullName())).GoIdent)
+	enumName := gen.ObjectNamed(string(f.Descriptor.Enum().FullName())).GoIdent
 
 	g.P("var val_", f.GoName, " int32")
-	g.P("if err:= ", g.QualifiedGoIdent(f.Decoder), "(", "&val_", f.GoName, ", reader); err != nil {")
+	g.P("if err:= ", g.QualifiedGoIdent(f.Decoder), "(reader, ", "&val_", f.GoName, "); err != nil {")
 	g.P("return err")
 	g.P("}")
-	g.P(identifier, " = val_", f.GoName)
+	g.P(identifier, " = ", enumName, "(val_", f.GoName, ")")
 
 }
 
@@ -386,7 +383,7 @@ func (gen *Generator) generateSingularParser(g *protogen.GeneratedFile, f field,
 		if createVal {
 			g.P("var ", identifier, " "+goType)
 		}
-		g.P("if err:= ", g.QualifiedGoIdent(s), "(&", identifier, ", reader); err != nil { return err }")
+		g.P("if err:= ", g.QualifiedGoIdent(s), "(reader, &", identifier, "); err != nil { return err }")
 	}
 
 	decoder := f.Decoder

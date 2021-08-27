@@ -1,7 +1,7 @@
 package generator
 
 import (
-	"github.com/v8platfotm/protoc-gen-go-ras/plugin"
+	"github.com/v8platform/protoc-gen-go-ras/plugin"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
 )

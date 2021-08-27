@@ -5,7 +5,7 @@ package ras.encoding;
 import "google/protobuf/descriptor.proto";
 
 
-option go_package = "github.com/v8platform/rasbinary";
+option go_package = "github.com/v8platform/protoc-gen-go-ras/plugin";
 
 extend google.protobuf.FieldOptions {
 

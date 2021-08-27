@@ -111,16 +111,18 @@ func getEncoderByKind(desc protoreflect.FieldDescriptor) protogen.GoIdent {
 		return encoders["bool"]
 	case protoreflect.Int32Kind, protoreflect.Sint32Kind, protoreflect.Uint32Kind,
 		protoreflect.Fixed32Kind, protoreflect.Sfixed32Kind:
-		return encoders["int32"]
+		return encoders["int"]
 	case protoreflect.Int64Kind, protoreflect.Sint64Kind, protoreflect.Sfixed64Kind,
 		protoreflect.Uint64Kind, protoreflect.Fixed64Kind:
-		return encoders["int64"]
+		return encoders["long"]
 	case protoreflect.FloatKind:
-		return encoders["float32"]
+		return encoders["float"]
 	case protoreflect.DoubleKind:
-		return encoders["float64"]
+		return encoders["double"]
 	case protoreflect.StringKind:
 		return encoders["string"]
+	case protoreflect.EnumKind:
+		return encoders["byte"]
 	default:
 		return protogen.GoIdent{}
 	}

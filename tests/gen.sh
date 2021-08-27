@@ -1,0 +1,3 @@
+#sh
+
+buf generate

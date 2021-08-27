@@ -8,7 +8,7 @@ import "ras.proto";
 import "serialize/cluster.proto";
 
 option csharp_namespace = "ras.protocol.v1";
-option go_package = "github.com/v8platfotm/protoc-gen-go-ras/tests/test/gen";
+option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen";
 
 // Порядок кодирования/декодирования в формат RAS
 message Packet {

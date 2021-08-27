@@ -18,7 +18,7 @@ var (
 )
 
 const (
-	encoderPackage = protogen.GoImportPath("github.com/v8platform/encoder/ras")
+	encoderPackage = protogen.GoImportPath("github.com/v8platform/encoder/ras/codec256")
 	ioPackage      = protogen.GoImportPath("io")
 )
 
@@ -46,7 +46,7 @@ var (
 	parseByte     = protogen.GoIdent{GoName: "ParseByte", GoImportPath: encoderPackage}
 	parseBytes    = protogen.GoIdent{GoName: "ParseBytes", GoImportPath: encoderPackage}
 	parseShort    = protogen.GoIdent{GoName: "ParseShort", GoImportPath: encoderPackage}
-	parseUuid     = protogen.GoIdent{GoName: "ParseUuid", GoImportPath: encoderPackage}
+	parseUuid     = protogen.GoIdent{GoName: "ParseUUID", GoImportPath: encoderPackage}
 	parseType     = protogen.GoIdent{GoName: "ParseType", GoImportPath: encoderPackage}
 
 	encoders = map[string]protogen.GoIdent{
@@ -57,12 +57,12 @@ var (
 		"time":     parseTime,
 		"bytes":    parseBytes,
 		"short":    parseShort,
-		"float32":  parseFloat32,
-		"float64":  parseFloat64,
+		"float32":  parseShort,
+		"float64":  parseShort,
 		"string":   parseString,
 		"uuid":     parseUuid,
-		"int":      parseType,
-		"int64":    parseInt64,
+		"int":      parseShort,
+		"int64":    parseShort,
 	}
 
 	decoders = map[string]protogen.GoIdent{
