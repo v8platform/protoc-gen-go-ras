@@ -1,0 +1,136 @@
+syntax = "proto3";
+
+package ras.protocol.v1;
+
+
+import "google/protobuf/any.proto";
+import "google/protobuf/type.proto";
+import "ras.proto";
+option csharp_namespace = "ras.protocol.v1";
+option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen";
+
+message EndpointOpen {
+  option (encoding.packet_type) = "PACKET_TYPE_ENDPOINT_OPEN";
+  string service = 1 [(ras.encoding.field).order = 1];
+  string version = 3 [(ras.encoding.field) = {
+    order: 3,
+    encoder: "string",
+  }];
+  map<string, string> params = 4 [(ras.encoding.field).order = 4];
+}
+
+message EndpointOpenAck {
+  option (encoding.packet_type) = "PACKET_TYPE_ENDPOINT_OPEN_ACK";
+  string service = 1 [(ras.encoding.field).order = 1];
+  string version = 2 [(ras.encoding.field) = {
+    order: 2,
+    encoder: "string",
+  }];
+  int32 endpoint_id = 3 [(ras.encoding.field) = {
+    order: 3,
+    encoder: "null-size",
+  }];
+  map<string, string> params = 4 [(ras.encoding.field).order = 4];
+}
+
+message EndpointMessage {
+  option (encoding.packet_type) = "PACKET_TYPE_ENDPOINT_MESSAGE";
+  int32 endpoint_id = 1 [(ras.encoding.field) = {
+    order: 1,
+    encoder: "null-size",
+  }];
+  int32 format = 2 [(ras.encoding.field) = {
+    order: 2,
+    encoder: "short",
+  }];
+  EndpointDataType type = 3 [(ras.encoding.field) = {
+    order: 3,
+    encoder: "byte",
+  }];
+  oneof data {
+    EndpointDataVoidMessage void_message = 4 [
+      (ras.encoding.field) = {order: 4, type_field: 3, type_url: "ENDPOINT_DATA_TYPE_VOID_MESSAGE" }];
+    EndpointDataMessage message = 5 [
+      (ras.encoding.field) = {order: 4, type_field: 3, type_url: "ENDPOINT_DATA_TYPE_MESSAGE" }];
+    EndpointFailureMessage failure = 6 [
+      (ras.encoding.field) = {order: 4, type_field: 3, type_url: "ENDPOINT_DATA_TYPE_EXCEPTION" }];
+  };
+}
+
+message EndpointFailureAck  {
+  option (encoding.packet_type) = "PACKET_TYPE_ENDPOINT_FAILURE";
+  string service_id = 1 [(ras.encoding.field) = {
+    order: 1,
+  }];
+  string version = 2 [(ras.encoding.field) = {
+    order: 2,
+  }];
+  int32 endpoint_id = 3 [(ras.encoding.field) = {
+    order: 3,
+    encoder: "nullable",
+  }];
+  string class_cause = 4 [(ras.encoding.field) = {
+    order: 4,
+  }];
+  string message = 5 [(ras.encoding.field) = {
+    order: 5,
+  }];
+  repeated string trace = 6 [(ras.encoding.field) = {
+    order: 6,
+  }];
+  optional CauseError cause = 7 [(ras.encoding.field) = {
+    order: 7,
+  }];
+}
+
+message CauseError {
+
+  string service_id = 1 [(ras.encoding.field) = {
+    order: 1,
+  }];
+  string message = 2 [(ras.encoding.field) = {
+    order: 2,
+  }];
+  //  int32 size = 3 [(ras.encoding.field) = {
+  //    order: 2,
+  //    encoder: "size",
+  //  }];
+  //  optional CauseError cause = 4 [(ras.encoding.field) = {
+  //    order: 4,
+  //  }];
+}
+
+message EndpointDataVoidMessage {
+  option (ras.encoding.endpoint_data_type) = "ENDPOINT_DATA_TYPE_VOID_MESSAGE";
+}
+
+message EndpointDataMessage {
+  option (ras.encoding.endpoint_data_type) = "v";
+  int32 type = 1 [(ras.encoding.field) = {
+    order: 1,
+    encoder: "byte",
+  }];
+
+  bytes bytes = 2 [(ras.encoding.field) = {order: 2}];
+
+}
+
+message EndpointFailureMessage {
+  option (ras.encoding.endpoint_data_type) = "ENDPOINT_DATA_TYPE_EXCEPTION";
+  string service_id = 1 [(ras.encoding.field) = {
+    order: 1,
+  }];
+  string message = 2 [(ras.encoding.field) = {
+    order: 2,
+  }];
+  optional CauseError cause = 3 [(ras.encoding.field) = {
+    order: 3,
+  }];
+}
+
+enum EndpointDataType {
+
+  ENDPOINT_DATA_TYPE_VOID_MESSAGE = 0 [(ras.encoding.type_url) = "ras.protocol.v1.EndpointVoidDataMessage"];
+  ENDPOINT_DATA_TYPE_MESSAGE = 1 [(ras.encoding.type_url) = "ras.protocol.v1.EndpointDataMessage"];
+  ENDPOINT_DATA_TYPE_EXCEPTION = 255 [(ras.encoding.type_url) = "ras.protocol.v1.EndpointFailureMessage"];
+}

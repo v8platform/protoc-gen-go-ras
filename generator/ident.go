@@ -62,7 +62,7 @@ var (
 		"string":   parseString,
 		"uuid":     parseUuid,
 		"int":      parseShort,
-		"int64":    parseShort,
+		"long":     parseLong,
 	}
 
 	decoders = map[string]protogen.GoIdent{

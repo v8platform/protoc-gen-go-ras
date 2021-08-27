@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package v8platform.serialize.v1;
+
+import "google/protobuf/timestamp.proto";
+import "ras.proto";
+option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen/serialize";
+
+message LicenseInfo {
+  option (ras.encoding.message_type) = "GET_CLUSTERS_REQUEST";
+  // ignore
+  // need fill
+  string cluster_id = 1;
+  string process_id = 2;
+  string session_id = 3;
+  string user_name = 4;
+  string host = 6;
+  string app_id = 7;
+
+  // all version
+  string full_name = 8 [(ras.encoding.field) = {order: 1}];
+  string full_presentation = 9 [(ras.encoding.field) = {order: 2}];
+  bool issued_by_server = 10 [(ras.encoding.field) = {order: 3}];
+  int32 license_type = 11 [(ras.encoding.field) = {order: 4}];
+  int32 max_users_all = 12 [(ras.encoding.field) = {order: 5}];
+  int32 max_users_cur = 13 [(ras.encoding.field) = {order: 6}];
+  bool net = 14 [(ras.encoding.field) = {order: 7}];
+  string rmngr_address = 15 [(ras.encoding.field) = {order: 8}];
+  string rmngr_pid = 16 [(ras.encoding.field) = {order: 9}];
+  int32 rmngr_port = 17 [(ras.encoding.field) = {order: 10}];
+  string series = 18 [(ras.encoding.field) = {order: 11}];
+  string short_presentation = 19 [(ras.encoding.field) = {order: 12}];
+
+}

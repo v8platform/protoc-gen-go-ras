@@ -10,6 +10,8 @@ option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen/serialize
 
 
 message ClusterInfo {
+  option (ras.encoding.packet_type) = "PACKET_TYPE_ENDPOINT_MESSAGE";
+
   string uuid = 1 [(ras.encoding.field) = {
     order: 1,
     encoder: "uuid"

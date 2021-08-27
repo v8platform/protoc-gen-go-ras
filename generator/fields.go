@@ -36,8 +36,8 @@ type field struct {
 	Message    *protogen.Field
 	Descriptor protoreflect.FieldDescriptor
 
-	Opts *MessageFieldExtension
-
+	Opts    *MessageFieldExtension
+	Oneof   Fields
 	Encoder protogen.GoIdent
 	Decoder protogen.GoIdent
 }
@@ -48,7 +48,7 @@ func getMessageFields(m *protogen.Message) Fields {
 
 	for _, mfield := range m.Fields {
 
-		opts := GetMessageExtensionFor(mfield.Desc.Options())
+		opts := GetMessageFieldExtensionFor(mfield.Desc.Options())
 
 		if opts == nil {
 			continue
@@ -108,21 +108,21 @@ func getEncoderByKind(desc protoreflect.FieldDescriptor) protogen.GoIdent {
 
 	switch desc.Kind() {
 	case protoreflect.BoolKind:
-		return encoders["bool"]
+		return decoders["bool"]
 	case protoreflect.Int32Kind, protoreflect.Sint32Kind, protoreflect.Uint32Kind,
 		protoreflect.Fixed32Kind, protoreflect.Sfixed32Kind:
-		return encoders["int"]
+		return decoders["int"]
 	case protoreflect.Int64Kind, protoreflect.Sint64Kind, protoreflect.Sfixed64Kind,
 		protoreflect.Uint64Kind, protoreflect.Fixed64Kind:
-		return encoders["long"]
+		return decoders["long"]
 	case protoreflect.FloatKind:
-		return encoders["float"]
+		return decoders["float"]
 	case protoreflect.DoubleKind:
-		return encoders["double"]
+		return decoders["double"]
 	case protoreflect.StringKind:
-		return encoders["string"]
+		return decoders["string"]
 	case protoreflect.EnumKind:
-		return encoders["byte"]
+		return decoders["byte"]
 	default:
 		return protogen.GoIdent{}
 	}

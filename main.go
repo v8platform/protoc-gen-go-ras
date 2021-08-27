@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/v8platfotm/protoc-gen-go-ras/generator"
+	"github.com/v8platform/protoc-gen-go-ras/generator"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/types/pluginpb"
 )

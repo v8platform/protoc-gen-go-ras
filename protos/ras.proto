@@ -16,6 +16,12 @@ extend google.protobuf.OneofOptions {
   EncodingFieldOptions oneof_field = 475223888;
 }
 
+extend google.protobuf.MessageOptions {
+  string packet_type = 475223889;
+  string endpoint_data_type = 475223890;
+  string message_type = 475223891;
+}
+
 message EncodingFieldOptions {
   optional string encoder = 1;
   optional int32 order = 2;
@@ -31,3 +37,4 @@ extend google.protobuf.EnumValueOptions {
   // Ссылка на тип связанного сообщения
   string type_url = 475223891;
 }
+
