@@ -1,0 +1,26 @@
+---
+version: v1
+managed:
+  enabled: true
+  go_package_prefix:
+    default: github.com/v8platfotm/protoc-gen-go-ras/plugin
+    except:
+      - buf.build/googleapis/googleapis
+      - googleapies/google/api
+
+plugins:
+  - name: go
+    out: ./plugin
+    opt: paths=source_relative
+
+  #  - name: go-ras
+  #    opt: paths=source_relative
+  #    out: ./gen
+  #  - name: gotag
+  #    out: .
+  #    opt:
+  #      - paths=source_relative
+  #      - outdir=./gen
+#  - name: csharp
+#    out: ./csharp
+#    opt: paths=source_relative
