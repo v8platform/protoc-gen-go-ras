@@ -79,5 +79,6 @@ var (
 		"uuid":     parseUuid,
 		"int":      parseInt,
 		"long":     parseLong,
+		"type":     parseType,
 	}
 )
