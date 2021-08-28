@@ -37,7 +37,8 @@ type field struct {
 	Descriptor protoreflect.FieldDescriptor
 
 	Opts    *MessageFieldExtension
-	Oneof   Fields
+	Field   *protogen.Field
+	Oneof   *protogen.Field
 	Encoder protogen.GoIdent
 	Decoder protogen.GoIdent
 }
@@ -45,6 +46,20 @@ type field struct {
 func getMessageFields(m *protogen.Message) Fields {
 
 	var fields Fields
+
+	findOneOf := func(f *protogen.Field) *protogen.Field {
+		if f.Oneof == nil {
+			return nil
+		}
+
+		for _, OneofField := range f.Oneof.Fields {
+			if OneofField.GoName == f.GoName {
+				return OneofField
+			}
+		}
+
+		return nil
+	}
 
 	for _, mfield := range m.Fields {
 
@@ -60,6 +75,8 @@ func getMessageFields(m *protogen.Message) Fields {
 			GoIdent:    mfield.GoIdent,
 			Message:    mfield,
 			Descriptor: mfield.Desc,
+			Field:      mfield,
+			Oneof:      findOneOf(mfield),
 			Encoder:    getEncoder(opts.GetEncoder(), mfield.Desc),
 			Decoder:    getDecoder(opts.GetEncoder(), mfield.Desc),
 		})
@@ -71,16 +88,6 @@ func getMessageFields(m *protogen.Message) Fields {
 
 	return fields
 
-}
-
-func getDecoder(name string, desc protoreflect.FieldDescriptor) protogen.GoIdent {
-	encoder, ok := getEncoderByName(name)
-
-	if !ok {
-		encoder = getEncoderByKind(desc)
-	}
-
-	return encoder
 }
 
 func getEncoder(name string, desc protoreflect.FieldDescriptor) protogen.GoIdent {
@@ -105,6 +112,51 @@ func getEncoderByName(encoder string) (protogen.GoIdent, bool) {
 }
 
 func getEncoderByKind(desc protoreflect.FieldDescriptor) protogen.GoIdent {
+
+	switch desc.Kind() {
+	case protoreflect.BoolKind:
+		return encoders["bool"]
+	case protoreflect.Int32Kind, protoreflect.Sint32Kind, protoreflect.Uint32Kind,
+		protoreflect.Fixed32Kind, protoreflect.Sfixed32Kind:
+		return encoders["int"]
+	case protoreflect.Int64Kind, protoreflect.Sint64Kind, protoreflect.Sfixed64Kind,
+		protoreflect.Uint64Kind, protoreflect.Fixed64Kind:
+		return encoders["long"]
+	case protoreflect.FloatKind:
+		return encoders["float"]
+	case protoreflect.DoubleKind:
+		return encoders["double"]
+	case protoreflect.StringKind:
+		return encoders["string"]
+	case protoreflect.EnumKind:
+		return encoders["byte"]
+	default:
+		return protogen.GoIdent{}
+	}
+}
+
+func getDecoder(name string, desc protoreflect.FieldDescriptor) protogen.GoIdent {
+	encoder, ok := getDecoderByName(name)
+
+	if !ok {
+		encoder = getDecoderByKind(desc)
+	}
+
+	return encoder
+}
+
+func getDecoderByName(encoder string) (protogen.GoIdent, bool) {
+
+	ident, ok := decoders[encoder]
+
+	if ok {
+		return ident, ok
+	}
+
+	return protogen.GoIdent{}, false
+}
+
+func getDecoderByKind(desc protoreflect.FieldDescriptor) protogen.GoIdent {
 
 	switch desc.Kind() {
 	case protoreflect.BoolKind:

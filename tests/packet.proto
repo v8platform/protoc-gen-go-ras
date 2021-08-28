@@ -13,37 +13,31 @@ option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen";
 // Порядок кодирования/декодирования в формат RAS
 message Packet {
 
+  option (ras.encoding.options).generate_packet_helpers = true;
+
   PacketType type = 1 [(ras.encoding.field) = {
-      encoder: "byte",
-      order: 1,
-    }
+    encoder: "byte",
+    order: 1,
+  }
   ];
 
   int32 size = 2 [(ras.encoding.field) = {
-      encoder: "size",
-      order: 2,
-    }];
-
-  bytes data = 3 [(ras.encoding.field) = {
-      encoder: "bytes",
-      order: 3,
-      size_field: 2,
-      version: 3,
-    }];
-
-  repeated  v8platform.serialize.v1.ClusterInfo clusters = 4 [(ras.encoding.field) = {
-    order: 4,
-    version: 3,
+    encoder: "size",
+    order: 2,
   }];
 
-  repeated int32 ints = 5 [(ras.encoding.field) = {
-    order: 5,
+  bytes data = 3 [(ras.encoding.field) = {
+    encoder: "bytes",
+    order: 3,
+    size_field: 2,
     version: 3,
   }];
 }
 
 
 enum PacketType {
+  option(ras.encoding.message_option) = "packet_type";
+
   PACKET_TYPE_NEGOTIATE = 0 [(ras.encoding.type_url) = "ras.protocol.v1.NegotiateMessage"];
   PACKET_TYPE_CONNECT = 1 [(ras.encoding.type_url) = "ras.protocol.v1.ConnectMessage"];
   PACKET_TYPE_CONNECT_ACK = 2 [(ras.encoding.type_url) = "ras.protocol.v1.ConnectMessageAck"];

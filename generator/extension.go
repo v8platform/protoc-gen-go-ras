@@ -11,9 +11,35 @@ type MessageFieldExtension struct {
 }
 
 type MessageExtension struct {
-	PacketType       string
-	MessageType      string
-	EndpointDataType string
+	*plugin.EncodingMessageOptions
+
+	//PacketType       string
+	//MessageType      string
+	//EndpointDataType string
+	//GenerateEmpty bool
+}
+
+func (e *MessageExtension) GetTypeOption() (string, string) {
+
+	if e.EncodingMessageOptions == nil {
+		return "", ""
+	}
+
+	switch e.Type.(type) {
+	case *plugin.EncodingMessageOptions_PacketType:
+		return e.GetPacketType(), "packet_type"
+	case *plugin.EncodingMessageOptions_EndpointDataType:
+		return e.GetEndpointDataType(), "endpoint_data_type"
+	case *plugin.EncodingMessageOptions_MessageType:
+		return e.GetMessageType(), "message_type"
+	default:
+		//log.Fatalln("Error type option", e)
+	}
+	return "", ""
+}
+
+type EnumExtension struct {
+	MessageOption string
 }
 
 func GetMessageFieldExtensionFor(m proto.Message) *MessageFieldExtension {
@@ -30,27 +56,25 @@ func GetMessageFieldExtensionFor(m proto.Message) *MessageFieldExtension {
 
 func GetMessageExtensionFor(m proto.Message) *MessageExtension {
 
-	opts := m.(*descriptorpb.MessageOptions)
+	opts, _ := m.(*descriptorpb.MessageOptions)
 
-	if opts == nil {
+	if opts == nil || !proto.HasExtension(opts, plugin.E_Options) {
 		return nil
 	}
-	ext := &MessageExtension{}
 
-	if proto.HasExtension(opts, plugin.E_PacketType) {
-		packetType := proto.GetExtension(opts, plugin.E_PacketType).(string)
-		ext.PacketType = packetType
+	ext := proto.GetExtension(opts, plugin.E_Options).(*plugin.EncodingMessageOptions)
+
+	return &MessageExtension{ext}
+}
+
+func GetEnumExtensionFor(m proto.Message) *EnumExtension {
+
+	opts := m.(*descriptorpb.EnumOptions)
+	if opts == nil || !proto.HasExtension(opts, plugin.E_MessageOption) {
+		return nil
 	}
 
-	if proto.HasExtension(opts, plugin.E_MessageType) {
-		messageType := proto.GetExtension(opts, plugin.E_MessageType).(string)
-		ext.MessageType = messageType
-	}
+	messageOption := proto.GetExtension(opts, plugin.E_MessageOption).(string)
 
-	if proto.HasExtension(opts, plugin.E_EndpointDataType) {
-		endpointDataType := proto.GetExtension(opts, plugin.E_EndpointDataType).(string)
-		ext.EndpointDataType = endpointDataType
-	}
-
-	return ext
+	return &EnumExtension{messageOption}
 }

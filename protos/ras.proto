@@ -8,7 +8,6 @@ import "google/protobuf/descriptor.proto";
 option go_package = "github.com/v8platform/protoc-gen-go-ras/plugin";
 
 extend google.protobuf.FieldOptions {
-
   EncodingFieldOptions field = 475223888;
 }
 
@@ -17,9 +16,20 @@ extend google.protobuf.OneofOptions {
 }
 
 extend google.protobuf.MessageOptions {
-  string packet_type = 475223889;
-  string endpoint_data_type = 475223890;
-  string message_type = 475223891;
+  EncodingMessageOptions options = 475223889;
+}
+
+message EncodingMessageOptions  {
+  bool generate_empty = 1;
+  bool generate_packet_helpers = 2;
+  bool generate_endpoint_message_helpers = 3;
+  bool generate_message_helpers = 4;
+  oneof type {
+    string packet_type = 5;
+    string endpoint_data_type = 6;
+    string message_type = 7;
+  }
+  bool generate_error_fn = 8;
 }
 
 message EncodingFieldOptions {
@@ -33,8 +43,13 @@ message EncodingFieldOptions {
 
 }
 
+
+extend google.protobuf.EnumOptions {
+  // Название опции в message
+  string message_option = 475223891;
+}
+
 extend google.protobuf.EnumValueOptions {
-  // Ссылка на тип связанного сообщения
   string type_url = 475223891;
 }
 

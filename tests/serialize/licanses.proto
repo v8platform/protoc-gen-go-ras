@@ -7,7 +7,6 @@ import "ras.proto";
 option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen/serialize";
 
 message LicenseInfo {
-  option (ras.encoding.message_type) = "GET_CLUSTERS_REQUEST";
   // ignore
   // need fill
   string cluster_id = 1;

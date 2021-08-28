@@ -2,52 +2,46 @@ package generator
 
 import (
 	"fmt"
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"google.golang.org/protobuf/compiler/protogen"
-	"google.golang.org/protobuf/reflect/protoreflect"
 	"log"
 	"os"
 	"strings"
-	"unicode"
-	"unicode/utf8"
 )
 
 // Object is an interface abstracting the abilities shared by enums, messages, extensions and imported objects.
 type Object struct {
 	protogen.GoIdent
-	File *protogen.File
+	File      *protogen.File
+	TypeIdent protogen.GoIdent
 }
 
 type Generator struct {
 	plugin           *protogen.Plugin
 	typeNameToObject map[string]Object
+	enumNameToObject map[string]Object
+	enumToObject     map[string]Object
 	parseFuncName    string
+	formatFuncName   string
 }
 
 func NewGenerator(plugin *protogen.Plugin) *Generator {
 
 	gen := &Generator{
-		plugin:        plugin,
-		parseFuncName: "Parse",
+		plugin:         plugin,
+		parseFuncName:  "Parse",
+		formatFuncName: "Formatter",
 	}
 	gen.BuildTypeNameMap()
-
+	gen.BuildEnumNameMap()
+	gen.BuildEnumToObjectMap()
 	// log.Println("types", gen.typeNameToObject)
 
 	return gen
 }
 
-// BuildTypeNameMap builds the map from fully qualified type names to objects.
-// The key names for the map come from the input data, which puts a period at the beginning.
-// It should be called after SetPackageNames and before GenerateAllFiles.
 func (gen *Generator) BuildTypeNameMap() {
 	gen.typeNameToObject = make(map[string]Object)
 	for _, f := range gen.plugin.Files {
-		// The names in this loop are defined by the proto world, not us, so the
-		// package name may be empty.  If so, the dotted package name of X will
-		// be ".X"; otherwise it will be ".pkg.X".
 		dottedPkg := "." + string(f.Proto.GetPackage())
 
 		if dottedPkg != "." {
@@ -57,7 +51,7 @@ func (gen *Generator) BuildTypeNameMap() {
 		for _, enum := range f.Enums {
 			name := dottedPkg + enum.GoIdent.GoName
 
-			log.Println("Add enum", name)
+			//log.Println("Add enum", name)
 
 			gen.typeNameToObject[name] = Object{
 				GoIdent: enum.GoIdent,
@@ -66,7 +60,7 @@ func (gen *Generator) BuildTypeNameMap() {
 		}
 		for _, desc := range f.Messages {
 			name := dottedPkg + desc.GoIdent.GoName
-			log.Println("Add message", name, desc.GoIdent.String())
+			//log.Println("Add message", name, desc.GoIdent.String())
 
 			gen.typeNameToObject[name] = Object{
 				GoIdent: desc.GoIdent,
@@ -76,21 +70,69 @@ func (gen *Generator) BuildTypeNameMap() {
 	}
 }
 
+func (gen *Generator) BuildEnumToObjectMap() {
+	gen.enumToObject = make(map[string]Object)
+	for _, f := range gen.plugin.Files {
+
+		for _, message := range f.Messages {
+
+			messageExtension := GetMessageExtensionFor(message.Desc.Options())
+
+			if messageExtension == nil {
+				continue
+			}
+
+			typeName, _ := messageExtension.GetTypeOption()
+
+			gen.enumToObject[typeName] = Object{
+				GoIdent: message.GoIdent,
+				File:    f,
+			}
+		}
+	}
+}
+
+func (gen *Generator) BuildEnumNameMap() {
+	gen.enumNameToObject = make(map[string]Object)
+	for _, f := range gen.plugin.Files {
+
+		for _, enum := range f.Enums {
+
+			for _, enumValue := range enum.Values {
+				name := string(enumValue.Desc.Name())
+
+				//log.Println("Add enum by name", name)
+
+				gen.enumNameToObject[name] = Object{
+					GoIdent:   enumValue.GoIdent,
+					File:      f,
+					TypeIdent: enumValue.Parent.GoIdent,
+				}
+			}
+		}
+	}
+}
+
 // dottedSlice turns a sliced name into a dotted name.
 func dottedSlice(elem []string) string { return strings.Join(elem, ".") }
 
-// ObjectNamed, given a fully-qualified input type name as it appears in the input data,
-// returns the descriptor for the message or enum with that name.
 func (gen *Generator) ObjectNamed(typeName string) Object {
 
 	if !strings.HasPrefix(typeName, ".") {
 		typeName = "." + typeName
 	}
-	log.Println("get", typeName)
-
 	o, ok := gen.typeNameToObject[typeName]
 	if !ok {
 		gen.Fail("can't find object with type", typeName)
+	}
+	return o
+}
+
+func (gen *Generator) EnumNamed(typeName string) Object {
+
+	o, ok := gen.enumNameToObject[typeName]
+	if !ok {
+		gen.Fail("can't find object with enum name", typeName)
 	}
 	return o
 }
@@ -103,12 +145,12 @@ const (
 	deprecationComment = "// Deprecated: Do not use."
 )
 
-func (gen *Generator) GenerateFile(plugin *protogen.Plugin, file *protogen.File) *protogen.GeneratedFile {
+func (gen *Generator) GenerateFile(plugin *protogen.Plugin, file *protogen.File) {
 
 	filename := file.GeneratedFilenamePrefix + "_ras.pb.go"
 
 	// log.Printf("Processing %s", file.na)
-	log.Printf("Generating %s\n", fmt.Sprintf("%s.ras.pb.go", file.GeneratedFilenamePrefix))
+	log.Printf("Generating %s\n", fmt.Sprintf("%s_ras.pb.go", file.GeneratedFilenamePrefix))
 
 	g := plugin.NewGeneratedFile(filename, file.GoImportPath)
 	g.Skip()
@@ -122,15 +164,15 @@ func (gen *Generator) GenerateFile(plugin *protogen.Plugin, file *protogen.File)
 	g.P("// ", encoderPackage.Ident(""), ioPackage.Ident(""))
 	g.P()
 
-	//for i, imps := 0, file.Desc.Imports(); i < imps.Len(); i++ {
-	//	gen.genImport(plugin, g, file, imps.Get(i))
-	//}
+	for _, enum := range file.Enums {
+		gen.generateEnum(g, enum)
+	}
 
 	for _, message := range file.Messages {
+		//log.Println(message)
 		gen.genMessage(g, message)
 	}
 
-	return g
 }
 
 // Fail reports a problem and exits the program.
@@ -147,331 +189,77 @@ func (gen *Generator) Error(err error, msgs ...string) {
 	os.Exit(1)
 }
 
-func (gen *Generator) genImport(plugin *protogen.Plugin, g *protogen.GeneratedFile, f *protogen.File, imp protoreflect.FileImport) {
-	impFile, ok := plugin.FilesByPath[imp.Path()]
-	if !ok {
-		return
-	}
-	if impFile.GoImportPath == f.GoImportPath {
-		// Don't generate imports or aliases for types in the same Go package.
-		return
-	}
-	// Generate imports for all non-weak dependencies, even if they are not
-	// referenced, because other code and tools depend on having the
-	// full transitive closure of protocol buffer types in the binary.
-	if !imp.IsWeak {
-		g.Import(impFile.GoImportPath)
-	}
-	if !imp.IsPublic {
-		return
-	}
-
-	// Generate public imports by generating the imported file, parsing it,
-	// and extracting every symbol that should receive a forwarding declaration.
-	impGen := gen.GenerateFile(plugin, impFile)
-	impGen.Skip()
-	b, err := impGen.Content()
-	if err != nil {
-		plugin.Error(err)
-		return
-	}
-	fset := token.NewFileSet()
-	astFile, err := parser.ParseFile(fset, "", b, parser.ParseComments)
-	if err != nil {
-		plugin.Error(err)
-		return
-	}
-	genForward := func(tok token.Token, name string, expr ast.Expr) {
-		// Don't import unexported symbols.
-		r, _ := utf8.DecodeRuneInString(name)
-		if !unicode.IsUpper(r) {
-			return
-		}
-		// Don't import the FileDescriptor.
-		if name == impFile.GoDescriptorIdent.GoName {
-			return
-		}
-		// Don't import decls referencing a symbol defined in another package.
-		// i.e., don't import decls which are themselves public imports:
-		//
-		//	type T = somepackage.T
-		if _, ok := expr.(*ast.SelectorExpr); ok {
-			return
-		}
-		g.P(tok, " ", name, " = ", impFile.GoImportPath.Ident(name))
-	}
-	g.P("// Symbols defined in public import of ", imp.Path(), ".")
-	g.P()
-	for _, decl := range astFile.Decls {
-		switch decl := decl.(type) {
-		case *ast.GenDecl:
-			for _, spec := range decl.Specs {
-				switch spec := spec.(type) {
-				case *ast.TypeSpec:
-					genForward(decl.Tok, spec.Name.Name, spec.Type)
-				case *ast.ValueSpec:
-					for i, name := range spec.Names {
-						var expr ast.Expr
-						if i < len(spec.Values) {
-							expr = spec.Values[i]
-						}
-						genForward(decl.Tok, name.Name, expr)
-					}
-				case *ast.ImportSpec:
-				default:
-					panic(fmt.Sprintf("can't generate forward for spec type %T", spec))
-				}
-			}
-		}
-	}
-	g.P()
-}
-
 func (gen *Generator) genMessage(g *protogen.GeneratedFile, m *protogen.Message) {
 
 	ext := GetMessageExtensionFor(m.Desc.Options())
 
 	if ext != nil {
 
-		if len(ext.PacketType) > 0 {
-			g.Annotate(m.GoIdent.GoName, m.Location)
-			g.P("func (x *", m.GoIdent, ") GetPacketType() string {")
-			g.P("return \"", ext.PacketType, "\"")
-			g.P("}")
-			g.P()
-			g.Unskip()
-		}
-		if len(ext.MessageType) > 0 {
-			g.Annotate(m.GoIdent.GoName, m.Location)
-			g.P("func (x *", m.GoIdent, ") GetMessageType() string {")
-			g.P("return \"", ext.MessageType, "\"")
-			g.P("}")
-			g.P()
-			g.Unskip()
-		}
-
-		if len(ext.EndpointDataType) > 0 {
-			g.Annotate(m.GoIdent.GoName, m.Location)
-			g.P("func (x *", m.GoIdent, ") GetEndpointDataType() string {")
-			g.P("return \"", ext.EndpointDataType, "\"")
-			g.P("}")
-			g.P()
-			g.Unskip()
-		}
-	}
-
-	gen.genParse(g, m)
-}
-
-func (gen *Generator) genParse(g *protogen.GeneratedFile, m *protogen.Message) {
-
-	fields := getMessageFields(m)
-
-	if len(fields) == 0 {
-		return
-	}
-
-	g.Unskip()
-
-	g.P("func (x *", m.GoIdent, ") ", gen.parseFuncName, " (reader io.Reader, version int32) error {")
-	g.P("if x == nil { return nil }")
-
-	cVersion := int32(0)
-	brackets := 0
-	fields.Range(func(f field) bool {
-
-		fVersion := f.Opts.GetVersion()
-
-		if !(cVersion == fVersion) {
-
-			if brackets > 0 {
-				brackets--
-				g.P("}")
+		if ext.GetType() != nil {
+			enumName, typeOption := ext.GetTypeOption()
+			enumIdent := gen.EnumNamed(enumName)
+			enumTypeIdent := enumIdent.TypeIdent
+			var funcName string
+			switch typeOption {
+			case "packet_type":
+				funcName = "GetPacketType"
+			case "endpoint_data_type":
+				funcName = "GetEndpointDataType"
+			case "message_type":
+				funcName = "GetMessageType"
 			}
-			g.P("if version >= ", fVersion, "{")
-			brackets++
-			cVersion = fVersion
 
+			g.Annotate(m.GoIdent.GoName, m.Location)
+			g.P("func (x *", m.GoIdent, ") ", funcName, "() ", enumTypeIdent, " {")
+			g.P("return ", enumIdent.GoIdent)
+			g.P("}")
+			g.P()
+			g.Unskip()
 		}
 
-		gen.generateFieldParser(g, m, f)
-
-		return true
-	})
-
-	if brackets > 0 {
-		brackets--
-		g.P("}")
-	}
-
-	g.P("return nil")
-	g.P("}")
-}
-
-func (gen *Generator) genBytesParser(g *protogen.GeneratedFile, m *protogen.Message, f field, identifier string) {
-
-	if f.Opts.GetSizeField() != 0 {
-		g.P(identifier, " = make([]byte, x.Get", getMessageFields(m).FindByNumber(f.Opts.GetSizeField()).GoName, "())")
-	}
-
-	g.P("if err:= ", g.QualifiedGoIdent(parseBytes), "(reader,", identifier, "); err != nil {")
-	g.P("return err")
-	g.P("}")
-
-}
-
-func (gen *Generator) genEnumParser(g *protogen.GeneratedFile, m *protogen.Message, f field, identifier string) {
-
-	//g.P("// decode ", f.Descriptor.Enum().FullName())
-	//log.Println(f.Descriptor.Enum().FullName())
-
-	enumName := gen.ObjectNamed(string(f.Descriptor.Enum().FullName())).GoIdent
-
-	g.P("var val_", f.GoName, " int32")
-	g.P("if err:= ", g.QualifiedGoIdent(f.Decoder), "(reader, ", "&val_", f.GoName, "); err != nil {")
-	g.P("return err")
-	g.P("}")
-	g.P(identifier, " = ", enumName, "(val_", f.GoName, ")")
-
-}
-
-func (gen *Generator) genListParser(g *protogen.GeneratedFile, m *protogen.Message, f field, identifier string) {
-
-	sizeFieldName := "size_" + f.GoName
-
-	g.P("var ", sizeFieldName, " int")
-
-	if f.Opts.GetSizeField() != 0 {
-		g.P(sizeFieldName, " = x.Get", getMessageFields(m).FindByNumber(f.Opts.GetSizeField()).GoName, "()")
-	} else {
-		g.P("if err:= ", g.QualifiedGoIdent(parseSize), "(reader, &", sizeFieldName, "); err != nil {")
-		g.P("return err")
-		g.P("}")
-	}
-
-	g.P("for i := 0; i <", sizeFieldName, "; i++ {")
-
-	gen.generateValueParser(g, m, f, "val", true)
-
-	g.P(identifier, " = append("+identifier, ", val)")
-	g.P("}")
-
-}
-
-func (gen *Generator) generateFieldParser(g *protogen.GeneratedFile, m *protogen.Message, f field) {
-
-	identifier := "x." + f.GoName
-
-	g.P("// decode ", identifier, " opts: "+f.Opts.String())
-
-	switch {
-	case f.Descriptor.IsList():
-		gen.genListParser(g, m, f, identifier)
-	case f.Descriptor.ContainingOneof() != nil:
-
-		//gen.genOneofParser(g, m, f, "x." + string(f.Descriptor.ContainingOneof().Name()))
-
-	case f.Descriptor.IsMap():
-		//gen.Error("TODO generate map")
-	default:
-		gen.generateValueParser(g, m, f, identifier, false)
-	}
-}
-
-func (gen *Generator) generateValueParser(g *protogen.GeneratedFile, m *protogen.Message, f field, identifier string, createVal bool) {
-
-	switch f.Descriptor.Kind() {
-	case protoreflect.BytesKind:
-		gen.genBytesParser(g, m, f, identifier)
-	case protoreflect.EnumKind:
-		gen.genEnumParser(g, m, f, identifier)
-	case protoreflect.MessageKind, protoreflect.GroupKind:
-		gen.generateMessageParser(g, m, f, identifier, createVal)
-	default:
-		gen.generateSingularParser(g, f, identifier, createVal)
-	}
-}
-
-func (gen *Generator) generateMessageParser(g *protogen.GeneratedFile, m *protogen.Message, f field, identifier string, createVal bool) {
-
-	if genFunc := gen.wellKnownTypeParse(f.Descriptor.Message().FullName()); genFunc != nil {
-		genFunc(g, m, f, identifier, createVal)
-		return
-	}
-
-	valueName := string(f.Descriptor.Message().FullName())
-	if createVal {
-		g.P(identifier, " := &", gen.ObjectNamed(valueName).GoIdent, "{}")
-
-	} else {
-		g.P(identifier, " = &", gen.ObjectNamed(valueName).GoIdent, "{}")
-	}
-	g.P("if err:= ", identifier, ".", gen.parseFuncName, "(reader, version)", "; err != nil { return err }")
-	g.P()
-
-}
-
-//
-func (gen *Generator) generateSingularParser(g *protogen.GeneratedFile, f field, identifier string, createVal bool) {
-
-	F := func(s protogen.GoIdent, goType string) {
-		if createVal {
-			g.P("var ", identifier, " "+goType)
+		if ext.GetGeneratePacketHelpers() {
+			gen.generatePacketHelpers(g, m)
 		}
-		g.P("if err:= ", g.QualifiedGoIdent(s), "(reader, &", identifier, "); err != nil { return err }")
+
+		if ext.GetGenerateErrorFn() {
+			gen.generateErrorHelpers(g, m)
+		}
 	}
 
-	decoder := f.Decoder
-
-	switch f.Descriptor.Kind() {
-	case protoreflect.BoolKind:
-		F(decoder, "bool")
-	case protoreflect.Int32Kind, protoreflect.Sint32Kind, protoreflect.Uint32Kind,
-		protoreflect.Fixed32Kind, protoreflect.Sfixed32Kind:
-		F(decoder, "int32")
-	case protoreflect.Int64Kind, protoreflect.Sint64Kind, protoreflect.Sfixed64Kind,
-		protoreflect.Uint64Kind, protoreflect.Fixed64Kind:
-		F(decoder, "int64")
-	case protoreflect.FloatKind:
-		F(decoder, "float32")
-	case protoreflect.DoubleKind:
-		F(decoder, "float64")
-	case protoreflect.StringKind:
-		F(decoder, "string")
-	default:
-		gen.Fail("Unknown type decoder")
-	}
-
+	gen.genParse(g, m, ext)
+	gen.genFormatter(g, m, ext)
 }
 
-func (gen *Generator) genOneofParser(g *protogen.GeneratedFile, m *protogen.Message, f field, identifier string) {
+// TODO refactor
+func (gen *Generator) generateEnum(g *protogen.GeneratedFile, enum *protogen.Enum) {
 
-	if f.Opts.GetTypeField() == 0 {
-		return
+	ext := GetEnumExtensionFor(enum.Desc.Options())
+
+	if ext != nil {
+
+		switch ext.MessageOption {
+
+		case "packet_type":
+			g.Annotate(enum.GoIdent.GoName, enum.Location)
+			g.P("func (", enum.GoIdent, ") GetPacketType(value string)", enum.GoIdent, "{")
+			g.P("return ", enum.GoIdent, "(", enum.GoIdent, "_value[value])")
+			g.P("}")
+			g.P()
+			g.Unskip()
+		case "message_type":
+			g.Annotate(enum.GoIdent.GoName, enum.Location)
+			g.P("func (", enum.GoIdent, ") GetMessageType(value string)", enum.GoIdent, "{")
+			g.P("return ", enum.GoIdent, "(", enum.GoIdent, "_value[value])")
+			g.P("}")
+			g.P()
+			g.Unskip()
+		case "endpoint_data_type":
+			g.Annotate(enum.GoIdent.GoName, enum.Location)
+			g.P("func (", enum.GoIdent, ") GetEndpointDataType(value string)", enum.GoIdent, "{")
+			g.P("return ", enum.GoIdent, "(", enum.GoIdent, "_value[value])")
+			g.P("}")
+			g.P()
+			g.Unskip()
+		}
 	}
-
-	g.P("type_val := x.Get", getMessageFields(m).FindByNumber(f.Opts.GetTypeField()).GoName, "().String()")
-	g.P("if type_val == \"", f.Opts.TypeUrl, "\" {")
-	gen.generateValueParser(g, m, f, identifier, false)
-	g.P("}")
-
 }
-
-//
-// func namesListQuoteAndJoinByComma(fieldDesc protoreflect.FieldDescriptor) string {
-// 	return `"` + strings.Join(namesList(fieldDesc), `", "`) + `"`
-// }
-//
-// func namesList(fieldDesc protoreflect.FieldDescriptor) []string {
-// 	result := make([]string, 1, 2)
-//
-// 	jsonName := fieldDesc.JSONName()
-// 	result[0] = jsonName
-//
-// 	protoName := string(fieldDesc.Name())
-// 	if protoName != jsonName {
-// 		result = append(result, protoName)
-// 	}
-//
-// 	return result
-// }

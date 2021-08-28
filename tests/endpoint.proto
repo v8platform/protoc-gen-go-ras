@@ -10,7 +10,7 @@ option csharp_namespace = "ras.protocol.v1";
 option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen";
 
 message EndpointOpen {
-  option (encoding.packet_type) = "PACKET_TYPE_ENDPOINT_OPEN";
+  option (encoding.options).packet_type = "PACKET_TYPE_ENDPOINT_OPEN";
   string service = 1 [(ras.encoding.field).order = 1];
   string version = 3 [(ras.encoding.field) = {
     order: 3,
@@ -20,7 +20,7 @@ message EndpointOpen {
 }
 
 message EndpointOpenAck {
-  option (encoding.packet_type) = "PACKET_TYPE_ENDPOINT_OPEN_ACK";
+  option (encoding.options).packet_type = "PACKET_TYPE_ENDPOINT_OPEN_ACK";
   string service = 1 [(ras.encoding.field).order = 1];
   string version = 2 [(ras.encoding.field) = {
     order: 2,
@@ -28,16 +28,16 @@ message EndpointOpenAck {
   }];
   int32 endpoint_id = 3 [(ras.encoding.field) = {
     order: 3,
-    encoder: "null-size",
+    encoder: "nullable",
   }];
   map<string, string> params = 4 [(ras.encoding.field).order = 4];
 }
 
 message EndpointMessage {
-  option (encoding.packet_type) = "PACKET_TYPE_ENDPOINT_MESSAGE";
+  option (encoding.options).packet_type = "PACKET_TYPE_ENDPOINT_MESSAGE";
   int32 endpoint_id = 1 [(ras.encoding.field) = {
     order: 1,
-    encoder: "null-size",
+    encoder: "nullable",
   }];
   int32 format = 2 [(ras.encoding.field) = {
     order: 2,
@@ -49,16 +49,18 @@ message EndpointMessage {
   }];
   oneof data {
     EndpointDataVoidMessage void_message = 4 [
-      (ras.encoding.field) = {order: 4, type_field: 3, type_url: "ENDPOINT_DATA_TYPE_VOID_MESSAGE" }];
+      (ras.encoding.field) = {order: 4, type_field: 3}];
     EndpointDataMessage message = 5 [
-      (ras.encoding.field) = {order: 4, type_field: 3, type_url: "ENDPOINT_DATA_TYPE_MESSAGE" }];
+      (ras.encoding.field) = {order: 4, type_field: 3}];
     EndpointFailureMessage failure = 6 [
-      (ras.encoding.field) = {order: 4, type_field: 3, type_url: "ENDPOINT_DATA_TYPE_EXCEPTION" }];
+      (ras.encoding.field) = {order: 4, type_field: 3}];
   };
 }
 
 message EndpointFailureAck  {
-  option (encoding.packet_type) = "PACKET_TYPE_ENDPOINT_FAILURE";
+  option (encoding.options).packet_type = "PACKET_TYPE_ENDPOINT_FAILURE";
+  option (encoding.options).generate_error_fn = true;
+
   string service_id = 1 [(ras.encoding.field) = {
     order: 1,
   }];
@@ -78,7 +80,7 @@ message EndpointFailureAck  {
   repeated string trace = 6 [(ras.encoding.field) = {
     order: 6,
   }];
-  optional CauseError cause = 7 [(ras.encoding.field) = {
+  CauseError cause = 7 [(ras.encoding.field) = {
     order: 7,
   }];
 }
@@ -101,11 +103,12 @@ message CauseError {
 }
 
 message EndpointDataVoidMessage {
-  option (ras.encoding.endpoint_data_type) = "ENDPOINT_DATA_TYPE_VOID_MESSAGE";
+  option (ras.encoding.options).endpoint_data_type= "ENDPOINT_DATA_TYPE_VOID_MESSAGE";
+  option (ras.encoding.options).generate_empty = true;
 }
 
 message EndpointDataMessage {
-  option (ras.encoding.endpoint_data_type) = "v";
+  option (ras.encoding.options).endpoint_data_type = "ENDPOINT_DATA_TYPE_MESSAGE";
   int32 type = 1 [(ras.encoding.field) = {
     order: 1,
     encoder: "byte",
@@ -116,20 +119,20 @@ message EndpointDataMessage {
 }
 
 message EndpointFailureMessage {
-  option (ras.encoding.endpoint_data_type) = "ENDPOINT_DATA_TYPE_EXCEPTION";
+  option (ras.encoding.options).endpoint_data_type = "ENDPOINT_DATA_TYPE_EXCEPTION";
   string service_id = 1 [(ras.encoding.field) = {
     order: 1,
   }];
   string message = 2 [(ras.encoding.field) = {
     order: 2,
   }];
-  optional CauseError cause = 3 [(ras.encoding.field) = {
+  CauseError cause = 3 [(ras.encoding.field) = {
     order: 3,
   }];
 }
 
 enum EndpointDataType {
-
+  option(ras.encoding.message_option) = "endpoint_data_type";
   ENDPOINT_DATA_TYPE_VOID_MESSAGE = 0 [(ras.encoding.type_url) = "ras.protocol.v1.EndpointVoidDataMessage"];
   ENDPOINT_DATA_TYPE_MESSAGE = 1 [(ras.encoding.type_url) = "ras.protocol.v1.EndpointDataMessage"];
   ENDPOINT_DATA_TYPE_EXCEPTION = 255 [(ras.encoding.type_url) = "ras.protocol.v1.EndpointFailureMessage"];

@@ -5,7 +5,7 @@ import "google.golang.org/protobuf/compiler/protogen"
 const (
 	reflectPackage = protogen.GoImportPath("reflect")
 	fmtPackage     = protogen.GoImportPath("fmt")
-	sortPackage    = protogen.GoImportPath("sort")
+	bytesPackage   = protogen.GoImportPath("bytes")
 	stringsPackage = protogen.GoImportPath("strings")
 	syncPackage    = protogen.GoImportPath("sync")
 	timePackage    = protogen.GoImportPath("time")
@@ -13,8 +13,10 @@ const (
 )
 
 var (
-	fmtSprintf = protogen.GoIdent{GoName: "Sprintf", GoImportPath: fmtPackage}
-	fmtErrorf  = protogen.GoIdent{GoName: "Errorf", GoImportPath: fmtPackage}
+	fmtSprintf     = protogen.GoIdent{GoName: "Sprintf", GoImportPath: fmtPackage}
+	fmtErrorf      = protogen.GoIdent{GoName: "Errorf", GoImportPath: fmtPackage}
+	bytesBuffer    = protogen.GoIdent{GoName: "Buffer", GoImportPath: bytesPackage}
+	bytesNewBuffer = protogen.GoIdent{GoName: "NewBuffer", GoImportPath: bytesPackage}
 )
 
 const (
@@ -23,16 +25,20 @@ const (
 )
 
 var (
-	formatBool    = protogen.GoIdent{GoName: "FormatBool", GoImportPath: encoderPackage}
-	formatString  = protogen.GoIdent{GoName: "FormatString", GoImportPath: encoderPackage}
-	formatInt32   = protogen.GoIdent{GoName: "FormatInt32", GoImportPath: encoderPackage}
-	formatInt64   = protogen.GoIdent{GoName: "FormatInt64", GoImportPath: encoderPackage}
-	formatFloat32 = protogen.GoIdent{GoName: "FormatFloat32", GoImportPath: encoderPackage}
-	formatFloat64 = protogen.GoIdent{GoName: "FormatFloat64", GoImportPath: encoderPackage}
-	formatTime    = protogen.GoIdent{GoName: "FormatTime", GoImportPath: encoderPackage}
-	formatBytes   = protogen.GoIdent{GoName: "FormatBytes", GoImportPath: encoderPackage}
-	formatSize    = protogen.GoIdent{GoName: "FormatSize", GoImportPath: encoderPackage}
-	formatShort   = protogen.GoIdent{GoName: "FormatShort", GoImportPath: encoderPackage}
+	formatBool     = protogen.GoIdent{GoName: "FormatBool", GoImportPath: encoderPackage}
+	formatString   = protogen.GoIdent{GoName: "FormatString", GoImportPath: encoderPackage}
+	formatInt      = protogen.GoIdent{GoName: "FormatInt", GoImportPath: encoderPackage}
+	formatLong     = protogen.GoIdent{GoName: "FormatLong", GoImportPath: encoderPackage}
+	formatFloat    = protogen.GoIdent{GoName: "FormatFloat", GoImportPath: encoderPackage}
+	formatDouble   = protogen.GoIdent{GoName: "FormatDouble", GoImportPath: encoderPackage}
+	formatTime     = protogen.GoIdent{GoName: "FormatTime", GoImportPath: encoderPackage}
+	formatBytes    = protogen.GoIdent{GoName: "FormatBytes", GoImportPath: encoderPackage}
+	formatSize     = protogen.GoIdent{GoName: "FormatSize", GoImportPath: encoderPackage}
+	formatShort    = protogen.GoIdent{GoName: "FormatShort", GoImportPath: encoderPackage}
+	formatNullable = protogen.GoIdent{GoName: "FormatNullable", GoImportPath: encoderPackage}
+	formatUUID     = protogen.GoIdent{GoName: "FormatUuid", GoImportPath: encoderPackage}
+	formatType     = protogen.GoIdent{GoName: "FormatType", GoImportPath: encoderPackage}
+	formatByte     = protogen.GoIdent{GoName: "FormatByte", GoImportPath: encoderPackage}
 
 	parseBool     = protogen.GoIdent{GoName: "ParseBool", GoImportPath: encoderPackage}
 	parseString   = protogen.GoIdent{GoName: "ParseString", GoImportPath: encoderPackage}
@@ -42,7 +48,7 @@ var (
 	parseDouble   = protogen.GoIdent{GoName: "ParseDouble", GoImportPath: encoderPackage}
 	parseTime     = protogen.GoIdent{GoName: "ParseTime", GoImportPath: encoderPackage}
 	parseSize     = protogen.GoIdent{GoName: "ParseSize", GoImportPath: encoderPackage}
-	parseNullSize = protogen.GoIdent{GoName: "ParseNullable", GoImportPath: encoderPackage}
+	parseNullable = protogen.GoIdent{GoName: "ParseNullable", GoImportPath: encoderPackage}
 	parseByte     = protogen.GoIdent{GoName: "ParseByte", GoImportPath: encoderPackage}
 	parseBytes    = protogen.GoIdent{GoName: "ParseBytes", GoImportPath: encoderPackage}
 	parseShort    = protogen.GoIdent{GoName: "ParseShort", GoImportPath: encoderPackage}
@@ -50,25 +56,26 @@ var (
 	parseType     = protogen.GoIdent{GoName: "ParseType", GoImportPath: encoderPackage}
 
 	encoders = map[string]protogen.GoIdent{
-		"bool":     parseBool,
-		"size":     parseSize,
-		"nullable": parseNullSize,
-		"byte":     parseByte,
-		"time":     parseTime,
-		"bytes":    parseBytes,
-		"short":    parseShort,
-		"float32":  parseShort,
-		"float64":  parseShort,
-		"string":   parseString,
-		"uuid":     parseUuid,
-		"int":      parseShort,
-		"long":     parseLong,
+		"bool":     formatBool,
+		"size":     formatSize,
+		"nullable": formatNullable,
+		"byte":     formatByte,
+		"time":     formatTime,
+		"bytes":    formatBytes,
+		"short":    formatShort,
+		"float":    formatFloat,
+		"Double":   formatDouble,
+		"string":   formatString,
+		"uuid":     formatUUID,
+		"int":      formatInt,
+		"long":     formatLong,
+		"type":     formatType,
 	}
 
 	decoders = map[string]protogen.GoIdent{
 		"bool":     parseBool,
 		"size":     parseSize,
-		"nullable": parseNullSize,
+		"nullable": parseNullable,
 		"byte":     parseByte,
 		"time":     parseTime,
 		"bytes":    parseBytes,
