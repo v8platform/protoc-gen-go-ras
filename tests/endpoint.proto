@@ -37,8 +37,8 @@ message EndpointOpenAck {
 message Endpoint {
   option (encoding.options).generate_endpoint_helpers = true;
   string service = 1;
-  string version = 2;
-  int32 endpoint_id = 3;
+  int32 version = 2;
+  int32 id = 3;
   int32 format = 4; // Codec version only 256
   map<string, string> params = 5;
 }

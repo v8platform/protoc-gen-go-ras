@@ -222,6 +222,9 @@ func (gen *Generator) genMessage(g *protogen.GeneratedFile, m *protogen.Message)
 		}
 
 		if ext.GetGenerateEndpointMessageHelpers() {
+			gen.generateEndpointMessageHelpers(g, m)
+		}
+		if ext.GetGenerateEndpointHelpers() {
 			gen.generateEndpointHelpers(g, m)
 		}
 

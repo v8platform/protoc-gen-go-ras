@@ -55,6 +55,8 @@ var (
 	parseUuid     = protogen.GoIdent{GoName: "ParseUUID", GoImportPath: encoderPackage}
 	parseType     = protogen.GoIdent{GoName: "ParseType", GoImportPath: encoderPackage}
 
+	codecVersion = protogen.GoIdent{GoName: "Version", GoImportPath: encoderPackage}
+
 	encoders = map[string]protogen.GoIdent{
 		"bool":     formatBool,
 		"size":     formatSize,

@@ -30,6 +30,19 @@ func (f Fields) FindByNumber(n int32) field {
 	panic("no found field by number")
 }
 
+func (f Fields) FindByName(name string) field {
+
+	for _, f2 := range f {
+
+		if f2.GoName == name {
+			return f2
+		}
+
+	}
+
+	panic("no found field by name")
+}
+
 type field struct {
 	GoName     string
 	GoIdent    protogen.GoIdent
