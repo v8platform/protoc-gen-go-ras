@@ -30,6 +30,7 @@ message EncodingMessageOptions  {
     string message_type = 7;
   }
   bool generate_error_fn = 8;
+  bool generate_endpoint_helpers = 9;
 }
 
 message EncodingFieldOptions {

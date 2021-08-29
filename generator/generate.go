@@ -221,6 +221,10 @@ func (gen *Generator) genMessage(g *protogen.GeneratedFile, m *protogen.Message)
 			gen.generatePacketHelpers(g, m)
 		}
 
+		if ext.GetGenerateEndpointMessageHelpers() {
+			gen.generateEndpointHelpers(g, m)
+		}
+
 		if ext.GetGenerateErrorFn() {
 			gen.generateErrorHelpers(g, m)
 		}

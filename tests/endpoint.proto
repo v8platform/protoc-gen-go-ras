@@ -6,6 +6,7 @@ package ras.protocol.v1;
 import "google/protobuf/any.proto";
 import "google/protobuf/type.proto";
 import "ras.proto";
+import "messages_types.proto";
 option csharp_namespace = "ras.protocol.v1";
 option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen";
 
@@ -33,8 +34,18 @@ message EndpointOpenAck {
   map<string, string> params = 4 [(ras.encoding.field).order = 4];
 }
 
+message Endpoint {
+  option (encoding.options).generate_endpoint_helpers = true;
+  string service = 1;
+  string version = 2;
+  int32 endpoint_id = 3;
+  int32 format = 4; // Codec version only 256
+  map<string, string> params = 5;
+}
+
 message EndpointMessage {
   option (encoding.options).packet_type = "PACKET_TYPE_ENDPOINT_MESSAGE";
+  option (encoding.options).generate_endpoint_message_helpers = true;
   int32 endpoint_id = 1 [(ras.encoding.field) = {
     order: 1,
     encoder: "nullable",
@@ -109,12 +120,12 @@ message EndpointDataVoidMessage {
 
 message EndpointDataMessage {
   option (ras.encoding.options).endpoint_data_type = "ENDPOINT_DATA_TYPE_MESSAGE";
-  int32 type = 1 [(ras.encoding.field) = {
+  ras.messages.v1.MessageType type = 1 [(ras.encoding.field) = {
     order: 1,
     encoder: "byte",
   }];
 
-  bytes bytes = 2 [(ras.encoding.field) = {order: 2}];
+  bytes bytes = 2 [(ras.encoding.field) = {order: 2, type_field: 1}];
 
 }
 
