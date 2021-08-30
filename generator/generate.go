@@ -3,6 +3,7 @@ package generator
 import (
 	"fmt"
 	"google.golang.org/protobuf/compiler/protogen"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"log"
 	"os"
 	"strings"
@@ -11,7 +12,7 @@ import (
 // Object is an interface abstracting the abilities shared by enums, messages, extensions and imported objects.
 type Object struct {
 	protogen.GoIdent
-	File      *protogen.File
+	Desc      protoreflect.Descriptor
 	TypeIdent protogen.GoIdent
 }
 
@@ -22,6 +23,59 @@ type Generator struct {
 	enumToObject     map[string]Object
 	parseFuncName    string
 	formatFuncName   string
+
+	idxObject             map[string]Object
+	idxMessage            map[string]*protogen.Message
+	idxMessageByEnumValue map[string]*protogen.Message
+	idxEnum               map[string]*protogen.Enum
+	idxEnumValues         map[string]*protogen.EnumValue
+
+	KnownTypes KnownTypes
+}
+
+type KnownTypes struct {
+	EnumPacketType            *protogen.Enum
+	EnumEndpointDataType      *protogen.Enum
+	EnumMessageType           *protogen.Enum
+	PacketEndpointMessageType *protogen.Message
+
+	EndpointType               *protogen.Message
+	EndpointImplSuffix         string
+	EndpointDataMessageType    *protogen.Message
+	EndpointVoidMessageType    *protogen.Message
+	EndpointFailureMessageType *protogen.Message
+}
+
+type KnownTypesOptions struct {
+	EnumPacketTypeName            string
+	EnumEndpointDataTypeName      string
+	EnumMessageTypeName           string
+	EndpointMessagePacketTypeName string
+
+	FormatterImplSuffix string
+	ParseImplSuffix     string
+	EndpointImplSuffix  string
+
+	EndpointDataMessageTypeName    string
+	EndpointVoidMessageTypeName    string
+	EndpointFailureMessageTypeName string
+}
+
+var defaultKnownTypesOptions = KnownTypesOptions{
+
+	EnumPacketTypeName:       "PacketType",
+	EnumEndpointDataTypeName: "EndpointDataType",
+	EnumMessageTypeName:      "MessageType",
+
+	EndpointMessagePacketTypeName: "PACKET_TYPE_ENDPOINT_MESSAGE",
+
+	FormatterImplSuffix: "Formatter",
+	ParseImplSuffix:     "Parse",
+	EndpointImplSuffix:  "Impl",
+
+	EndpointDataMessageTypeName:    "ENDPOINT_DATA_TYPE_MESSAGE",
+	EndpointVoidMessageTypeName:    "ENDPOINT_DATA_TYPE_VOID_MESSAGE",
+	EndpointFailureMessageTypeName: "ENDPOINT_DATA_TYPE_EXCEPTION",
 }
 
 func NewGenerator(plugin *protogen.Plugin) *Generator {
@@ -31,16 +85,20 @@ func NewGenerator(plugin *protogen.Plugin) *Generator {
 		parseFuncName:  "Parse",
 		formatFuncName: "Formatter",
 	}
-	gen.BuildTypeNameMap()
-	gen.BuildEnumNameMap()
-	gen.BuildEnumToObjectMap()
-	// log.Println("types", gen.typeNameToObject)
+	gen.fill()
+	gen.fillKnownTypes(defaultKnownTypesOptions)
 
 	return gen
 }
 
-func (gen *Generator) BuildTypeNameMap() {
-	gen.typeNameToObject = make(map[string]Object)
+func (gen *Generator) fill() {
+
+	gen.idxObject = make(map[string]Object)
+	gen.idxMessageByEnumValue = make(map[string]*protogen.Message)
+	gen.idxEnum = make(map[string]*protogen.Enum)
+	gen.idxEnumValues = make(map[string]*protogen.EnumValue)
+	gen.idxMessage = make(map[string]*protogen.Message)
+
 	for _, f := range gen.plugin.Files {
 		dottedPkg := "." + string(f.Proto.GetPackage())
 
@@ -51,66 +109,60 @@ func (gen *Generator) BuildTypeNameMap() {
 		for _, enum := range f.Enums {
 			name := dottedPkg + enum.GoIdent.GoName
 
-			//log.Println("Add enum", name)
-
-			gen.typeNameToObject[name] = Object{
+			gen.idxObject[name] = Object{
 				GoIdent: enum.GoIdent,
-				File:    f,
+				Desc:    enum.Desc,
+			}
+
+			gen.idxEnum[enum.GoIdent.GoName] = enum
+
+			for _, value := range enum.Values {
+				gen.idxEnumValues[string(value.Desc.Name())] = value
 			}
 		}
-		for _, desc := range f.Messages {
-			name := dottedPkg + desc.GoIdent.GoName
-			//log.Println("Add message", name, desc.GoIdent.String())
-
-			gen.typeNameToObject[name] = Object{
-				GoIdent: desc.GoIdent,
-				File:    f,
-			}
-		}
-	}
-}
-
-func (gen *Generator) BuildEnumToObjectMap() {
-	gen.enumToObject = make(map[string]Object)
-	for _, f := range gen.plugin.Files {
-
 		for _, message := range f.Messages {
-
-			messageExtension := GetMessageExtensionFor(message.Desc.Options())
-
-			if messageExtension == nil {
-				continue
+			name := dottedPkg + message.GoIdent.GoName
+			gen.idxObject[name] = Object{
+				GoIdent: message.GoIdent,
+				Desc:    message.Desc,
 			}
 
-			typeName, _ := messageExtension.GetTypeOption()
+			gen.idxMessage[string(message.Desc.Name())] = message
 
-			gen.enumToObject[typeName] = Object{
-				GoIdent: message.GoIdent,
-				File:    f,
+		}
+	}
+
+	for _, message := range gen.idxMessage {
+		messageExtension := GetMessageExtensionFor(message.Desc.Options())
+		if messageExtension != nil {
+			enumValue := messageExtension.GetTypeOption(gen)
+			if enumValue != nil {
+				gen.idxMessageByEnumValue[string(enumValue.Desc.Name())] = message
 			}
 		}
 	}
+
 }
 
-func (gen *Generator) BuildEnumNameMap() {
-	gen.enumNameToObject = make(map[string]Object)
-	for _, f := range gen.plugin.Files {
+func (gen *Generator) fillKnownTypes(options KnownTypesOptions) {
 
-		for _, enum := range f.Enums {
+	gen.KnownTypes = KnownTypes{
+		EnumPacketType:       gen.idxEnum[options.EnumPacketTypeName],
+		EnumEndpointDataType: gen.idxEnum[options.EnumEndpointDataTypeName],
+		EnumMessageType:      gen.idxEnum[options.EnumMessageTypeName],
 
-			for _, enumValue := range enum.Values {
-				name := string(enumValue.Desc.Name())
-
-				//log.Println("Add enum by name", name)
-
-				gen.enumNameToObject[name] = Object{
-					GoIdent:   enumValue.GoIdent,
-					File:      f,
-					TypeIdent: enumValue.Parent.GoIdent,
-				}
-			}
-		}
+		EndpointType:               gen.idxMessage["Endpoint"],
+		EndpointImplSuffix:         options.EndpointImplSuffix,
+		EndpointDataMessageType:    gen.idxMessageByEnumValue[options.EndpointDataMessageTypeName],
+		EndpointVoidMessageType:    gen.idxMessageByEnumValue[options.EndpointVoidMessageTypeName],
+		EndpointFailureMessageType: gen.idxMessageByEnumValue[options.EndpointFailureMessageTypeName],
+		PacketEndpointMessageType:  gen.idxMessageByEnumValue[options.EndpointMessagePacketTypeName],
 	}
+
+}
+
+func (t KnownTypes) EndpointImpl() protogen.GoIdent {
+	return protogen.GoIdent{GoName: t.EndpointType.GoIdent.GoName + t.EndpointImplSuffix, GoImportPath: t.EndpointType.GoIdent.GoImportPath}
 }
 
 // dottedSlice turns a sliced name into a dotted name.
@@ -121,18 +173,18 @@ func (gen *Generator) ObjectNamed(typeName string) Object {
 	if !strings.HasPrefix(typeName, ".") {
 		typeName = "." + typeName
 	}
-	o, ok := gen.typeNameToObject[typeName]
+	o, ok := gen.idxObject[typeName]
 	if !ok {
 		gen.Fail("can't find object with type", typeName)
 	}
 	return o
 }
 
-func (gen *Generator) EnumNamed(typeName string) Object {
+func (gen *Generator) EnumNamed(typeName string) *protogen.EnumValue {
 
-	o, ok := gen.enumNameToObject[typeName]
+	o, ok := gen.idxEnumValues[typeName]
 	if !ok {
-		gen.Fail("can't find object with enum name", typeName)
+		gen.Fail("can't find enum value with enum name", typeName)
 	}
 	return o
 }
@@ -164,10 +216,6 @@ func (gen *Generator) GenerateFile(plugin *protogen.Plugin, file *protogen.File)
 	g.P("// ", encoderPackage.Ident(""), ioPackage.Ident(""))
 	g.P()
 
-	for _, enum := range file.Enums {
-		gen.generateEnum(g, enum)
-	}
-
 	for _, message := range file.Messages {
 		//log.Println(message)
 		gen.genMessage(g, message)
@@ -196,22 +244,11 @@ func (gen *Generator) genMessage(g *protogen.GeneratedFile, m *protogen.Message)
 	if ext != nil {
 
 		if ext.GetType() != nil {
-			enumName, typeOption := ext.GetTypeOption()
-			enumIdent := gen.EnumNamed(enumName)
-			enumTypeIdent := enumIdent.TypeIdent
-			var funcName string
-			switch typeOption {
-			case "packet_type":
-				funcName = "GetPacketType"
-			case "endpoint_data_type":
-				funcName = "GetEndpointDataType"
-			case "message_type":
-				funcName = "GetMessageType"
-			}
-
+			enumValue := ext.GetTypeOption(gen)
+			funcName := "Get" + enumValue.Parent.GoIdent.GoName
 			g.Annotate(m.GoIdent.GoName, m.Location)
-			g.P("func (x *", m.GoIdent, ") ", funcName, "() ", enumTypeIdent, " {")
-			g.P("return ", enumIdent.GoIdent)
+			g.P("func (x *", m.GoIdent, ") ", funcName, "() ", enumValue.Parent.GoIdent, " {")
+			g.P("return ", enumValue.GoIdent)
 			g.P("}")
 			g.P()
 			g.Unskip()
@@ -235,38 +272,4 @@ func (gen *Generator) genMessage(g *protogen.GeneratedFile, m *protogen.Message)
 
 	gen.genParse(g, m, ext)
 	gen.genFormatter(g, m, ext)
-}
-
-// TODO refactor
-func (gen *Generator) generateEnum(g *protogen.GeneratedFile, enum *protogen.Enum) {
-
-	ext := GetEnumExtensionFor(enum.Desc.Options())
-
-	if ext != nil {
-
-		switch ext.MessageOption {
-
-		case "packet_type":
-			g.Annotate(enum.GoIdent.GoName, enum.Location)
-			g.P("func (", enum.GoIdent, ") GetPacketType(value string)", enum.GoIdent, "{")
-			g.P("return ", enum.GoIdent, "(", enum.GoIdent, "_value[value])")
-			g.P("}")
-			g.P()
-			g.Unskip()
-		case "message_type":
-			g.Annotate(enum.GoIdent.GoName, enum.Location)
-			g.P("func (", enum.GoIdent, ") GetMessageType(value string)", enum.GoIdent, "{")
-			g.P("return ", enum.GoIdent, "(", enum.GoIdent, "_value[value])")
-			g.P("}")
-			g.P()
-			g.Unskip()
-		case "endpoint_data_type":
-			g.Annotate(enum.GoIdent.GoName, enum.Location)
-			g.P("func (", enum.GoIdent, ") GetEndpointDataType(value string)", enum.GoIdent, "{")
-			g.P("return ", enum.GoIdent, "(", enum.GoIdent, "_value[value])")
-			g.P("}")
-			g.P()
-			g.Unskip()
-		}
-	}
 }

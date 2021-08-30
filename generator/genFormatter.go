@@ -100,7 +100,7 @@ func (gen *Generator) generateFieldFormatter(g *protogen.GeneratedFile, m *proto
 		gen.generateOneOfFormatter(g, m, f, f.GoName)
 
 	case f.Descriptor.IsMap():
-		g.P("// TODO generate map")
+		gen.generateMapFormatter(g, m, f, identifier)
 	default:
 		gen.generateValueFormatter(g, m, f, identifier, false)
 	}
@@ -118,6 +118,12 @@ func (gen *Generator) generateValueFormatter(g *protogen.GeneratedFile, m *proto
 	default:
 		gen.generateSingularFormatter(g, f, identifier, createVal)
 	}
+}
+
+func (gen *Generator) generateMapFormatter(g *protogen.GeneratedFile, m *protogen.Message, f field, identifier string) {
+
+	g.P("if err:= ", g.QualifiedGoIdent(formatSize), "(writer, len(", identifier, ")); err != nil { return err }")
+
 }
 
 func (gen *Generator) generateMessageFormatter(g *protogen.GeneratedFile, m *protogen.Message, f field, identifier string, createVal bool) {

@@ -120,6 +120,7 @@ message EndpointDataVoidMessage {
 
 message EndpointDataMessage {
   option (ras.encoding.options).endpoint_data_type = "ENDPOINT_DATA_TYPE_MESSAGE";
+  option (encoding.options).generate_message_helpers = true;
   ras.messages.v1.MessageType type = 1 [(ras.encoding.field) = {
     order: 1,
     encoder: "byte",
@@ -131,6 +132,7 @@ message EndpointDataMessage {
 
 message EndpointFailureMessage {
   option (ras.encoding.options).endpoint_data_type = "ENDPOINT_DATA_TYPE_EXCEPTION";
+  option (encoding.options).generate_error_fn = true;
   string service_id = 1 [(ras.encoding.field) = {
     order: 1,
   }];

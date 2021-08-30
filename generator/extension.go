@@ -2,6 +2,7 @@ package generator
 
 import (
 	"github.com/v8platform/protoc-gen-go-ras/plugin"
+	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
 )
@@ -19,23 +20,23 @@ type MessageExtension struct {
 	//GenerateEmpty bool
 }
 
-func (e *MessageExtension) GetTypeOption() (string, string) {
+func (e *MessageExtension) GetTypeOption(gen *Generator) *protogen.EnumValue {
 
 	if e.EncodingMessageOptions == nil {
-		return "", ""
+		return nil
 	}
 
 	switch e.Type.(type) {
 	case *plugin.EncodingMessageOptions_PacketType:
-		return e.GetPacketType(), "packet_type"
+		return gen.idxEnumValues[e.GetPacketType()]
 	case *plugin.EncodingMessageOptions_EndpointDataType:
-		return e.GetEndpointDataType(), "endpoint_data_type"
+		return gen.idxEnumValues[e.GetEndpointDataType()]
 	case *plugin.EncodingMessageOptions_MessageType:
-		return e.GetMessageType(), "message_type"
+		return gen.idxEnumValues[e.GetMessageType()]
 	default:
 		//log.Fatalln("Error type option", e)
 	}
-	return "", ""
+	return nil
 }
 
 type EnumExtension struct {

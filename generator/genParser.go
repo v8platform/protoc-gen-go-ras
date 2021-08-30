@@ -117,10 +117,17 @@ func (gen *Generator) generateFieldParser(g *protogen.GeneratedFile, m *protogen
 		gen.generateOneOfParser(g, m, f, "x."+f.Field.Oneof.GoName)
 
 	case f.Descriptor.IsMap():
-		g.P("// TODO generate map")
+		gen.generateMapParser(g, m, f, identifier)
 	default:
 		gen.generateValueParser(g, m, f, identifier, false)
 	}
+}
+
+func (gen *Generator) generateMapParser(g *protogen.GeneratedFile, m *protogen.Message, f field, identifier string) {
+
+	g.P("// TODO parse map")
+	// g.P("if err:= ", g.QualifiedGoIdent(formatSize), "(writer, len(", identifier, ")); err != nil { return err }")
+
 }
 
 func (gen *Generator) generateValueParser(g *protogen.GeneratedFile, m *protogen.Message, f field, identifier string, createVal bool) {
@@ -198,10 +205,10 @@ func (gen *Generator) generateOneOfParser(g *protogen.GeneratedFile, m *protogen
 	typeField := getMessageFields(m).FindByNumber(f.Opts.GetTypeField())
 
 	ext := GetMessageExtensionFor(f.Descriptor.Message().Options())
-	enumName, _ := ext.GetTypeOption()
+	enumValue := ext.GetTypeOption(gen)
 
 	valueName := string(f.Descriptor.Name())
-	g.P("if x.Get", typeField.GoName, "() == ", gen.EnumNamed(enumName).GoIdent, " {")
+	g.P("if x.Get", typeField.GoName, "() == ", enumValue.GoIdent, " {")
 	gen.generateMessageParser(g, m, f, valueName, true)
 
 	g.P(identifier, " = &", f.Oneof.GoIdent, "{")

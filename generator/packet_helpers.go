@@ -7,7 +7,7 @@ import (
 
 func (gen *Generator) generatePacketHelpers(g *protogen.GeneratedFile, m *protogen.Message) {
 
-	packetTypeIdent := gen.EnumNamed("PACKET_TYPE_NEGOTIATE").TypeIdent
+	packetTypeIdent := gen.KnownTypes.EnumPacketType.GoIdent
 	messageName := m.GoIdent.GoName + "Message"
 	messageFormatterName := messageName + "Formatter"
 	messageParserName := messageName + "Parser"
@@ -29,23 +29,33 @@ func (gen *Generator) generatePacketHelpers(g *protogen.GeneratedFile, m *protog
 	g.P("}")
 	g.P()
 	g.Annotate(m.GoIdent.GoName, m.Location)
-	g.P("func New", m.GoIdent.GoName, "(message ", m.GoIdent.GoName, "MessageFormatter) (*", m.GoIdent, ", error){")
-	g.P("buf := &", bytesBuffer, "{}")
-	g.P("if err := message.", gen.formatFuncName, "(buf, 0); err != nil { return nil, err }")
+	g.P("func New", m.GoIdent.GoName, "(message interface{}) (*", m.GoIdent, ", error){")
 	g.P("var packet ", m.GoIdent, "")
-	g.P("packet.Type = message.GetPacketType()")
+	g.P("switch typed := message.(type) {")
+	g.P("case ", ioReader, ":")
+	g.P("if err := packet.", gen.parseFuncName, "(typed, 0); err != nil { return nil, err }")
+	g.P("case ", messageFormatterName, ": ")
+	g.P("buf := &", bytesBuffer, "{}")
+	g.P("if err := typed.", gen.formatFuncName, "(buf, 0); err != nil { return nil, err }")
+	g.P("packet.Type = typed.GetPacketType()")
 	g.P("packet.Data = buf.Bytes()")
 	g.P("packet.Size = int32(len(packet.Data))")
+	g.P("default:")
+	g.P("return nil, ", fmtErrorf, "(\"unknown type <%T> to get new packet\", typed)")
+	g.P("}")
 	g.P("return &packet,  nil")
 	g.P("}")
 	g.P()
 	g.Annotate(m.GoIdent.GoName, m.Location)
 	g.P("func (x *", m.GoIdent, ") Unpack(into ", messageParserName, ") error {")
-	g.P("if x.GetType() != into.GetPacketType() {")
-	g.P("return ", fmtErrorf, "(\"unpack type no equal packet type. Has %s want %s\", into.GetPacketType(), x.GetType())")
-	g.P("}")
+	g.P("switch x.GetType() {")
+	g.P("case into.GetPacketType():")
 	g.P("buf := ", bytesNewBuffer, "(x.Data)")
 	g.P("return into.Parse(buf, 0)")
+	g.P("default:")
+	g.P("if _, err := x.UnpackNew(); err != nil { return err}")
+	g.P("return ", fmtErrorf, "(\"unpack type no equal packet type. Has %s want %s\", x.GetType(), into.GetPacketType())")
+	g.P("}")
 	g.P("}")
 	g.P()
 	g.Annotate(m.GoIdent.GoName, m.Location)
@@ -53,12 +63,12 @@ func (gen *Generator) generatePacketHelpers(g *protogen.GeneratedFile, m *protog
 	g.P("var into interface{}")
 	g.P("switch x.GetType() {")
 
-	for enumName, object := range gen.enumToObject {
+	for enumName, objectValue := range gen.idxMessageByEnumValue {
 		if strings.HasPrefix(enumName, "PACKET_TYPE") {
 			enumIdent := gen.EnumNamed(enumName)
-			g.P("// type ", enumIdent.GoName, " cast ", object.GoName)
+			g.P("// type ", enumIdent.GoIdent, " cast ", objectValue.GoIdent)
 			g.P("case ", enumIdent.GoIdent, " :")
-			g.P("into = &", object.GoIdent, "{}")
+			g.P("into = &", objectValue.GoIdent, "{}")
 		}
 	}
 

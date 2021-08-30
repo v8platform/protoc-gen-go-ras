@@ -24,6 +24,8 @@ const (
 	ioPackage      = protogen.GoImportPath("io")
 )
 
+var ioReader = protogen.GoIdent{GoName: "Reader", GoImportPath: ioPackage}
+
 var (
 	formatBool     = protogen.GoIdent{GoName: "FormatBool", GoImportPath: encoderPackage}
 	formatString   = protogen.GoIdent{GoName: "FormatString", GoImportPath: encoderPackage}
