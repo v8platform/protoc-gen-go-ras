@@ -4,9 +4,8 @@ package v8platform.serialize.v1;
 
 import "google/protobuf/timestamp.proto";
 import "ras.proto";
-import "serialize/licanses.proto";
-option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen/serialize";
-
+import "ras/serialize/v1/licanses.proto";
+option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen/ras/serialize/v1";
 message SessionInfo {
 
   string uuid = 1 [(ras.encoding.field) = {order: 1, encoder: "uuid"}];

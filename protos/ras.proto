@@ -31,6 +31,7 @@ message EncodingMessageOptions  {
   }
   bool generate_error_fn = 8;
   bool generate_endpoint_helpers = 9;
+  bool generate_io_write_to = 10;
 }
 
 message EncodingFieldOptions {

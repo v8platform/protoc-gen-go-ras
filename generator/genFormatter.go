@@ -19,6 +19,13 @@ func (gen *Generator) genFormatter(g *protogen.GeneratedFile, m *protogen.Messag
 		return
 	}
 
+	if ext != nil && ext.GetGenerateIoWriteTo() {
+		g.P("func (x *", m.GoIdent, ") WriteTo  (writer io.Writer, version int32) error {")
+		g.P("return nil ")
+		g.P("}")
+		g.Unskip()
+	}
+
 	g.Unskip()
 
 	g.P("func (x *", m.GoIdent, ") ", gen.formatFuncName, " (writer io.Writer, version int32) error {")

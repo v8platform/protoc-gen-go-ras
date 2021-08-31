@@ -4,9 +4,9 @@ package v8platform.serialize.v1;
 
 import "google/protobuf/timestamp.proto";
 import "ras.proto";
-option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen/serialize";
-
+option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen/ras/serialize/v1";
 message LicenseInfo {
+
   // ignore
   // need fill
   string cluster_id = 1;

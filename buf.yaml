@@ -4,7 +4,6 @@ deps:
 lint:
   use:
     - DEFAULT
-    -
 breaking:
   use:
     - FILE

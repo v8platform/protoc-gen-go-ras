@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package ras.protocol.v1;
+
+import "google/protobuf/any.proto";
+import "google/protobuf/descriptor.proto";
+import "ras/protocol/v1/param.proto";
+import "ras/protocol/v1/types.proto";
+import "ras.proto";
+
+option csharp_namespace = "ras.protocol.v1";
+option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen/ras/protocol/v1";
+
+// Порядок кодирования/декодирования в формат RAS
+message Packet {
+  option (ras.encoding.options).generate_packet_helpers = true;
+  PacketType type = 1 [(ras.encoding.field) = {
+      encoder: "byte",
+      order: 1,
+    }
+  ];
+
+  int32 size = 2 [(ras.encoding.field) = {
+      encoder: "size",
+      order: 2,
+    }];
+
+  bytes data = 3 [(ras.encoding.field) = {
+      encoder: "bytes",
+      order: 3,
+      type_field: 1,
+      size_field: 2,
+    }];
+}

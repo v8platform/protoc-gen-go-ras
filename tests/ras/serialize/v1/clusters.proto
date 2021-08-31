@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package v8platform.serialize.v1;
+
+import "google/protobuf/timestamp.proto";
+import "ras.proto";
+option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen/ras/serialize/v1";
+message ClusterInfo {
+
+  string uuid = 1 [(ras.encoding.field) = { order: 1, encoder: "uuid"}];
+  int32 expiration_timeout = 2 [(ras.encoding.field).order =2];
+  string host = 3 [(ras.encoding.field) = {
+    order: 3,
+  }];
+  int32 lifetime_limit = 4 [(ras.encoding.field) = {
+    order: 4,
+  }];
+  int32 Port = 5 [(ras.encoding.field) = {
+    order: 5,
+    encoder: "short",
+  }];
+  int32 max_memory_size = 6 [(ras.encoding.field) = {
+    order: 6,
+  }];
+  int32 max_memory_time_limit = 7 [(ras.encoding.field) = {
+    order: 7,
+  }];
+  string name = 8 [(ras.encoding.field) = {
+    order: 8,
+  }];
+  int32 security_level = 9 [(ras.encoding.field) = {
+    order: 9,
+  }];
+  int32 session_fault_tolerance_level = 10 [(ras.encoding.field) = {
+    order: 10,
+  }];
+  int32 load_balancing_mode = 11 [(ras.encoding.field) = {
+    order: 11,
+  }];
+  int32 errors_count_threshold = 12 [(ras.encoding.field) = {
+    order: 12,
+  }];
+  bool kill_problem_processes = 13 [(ras.encoding.field) = {
+    order: 13,
+  }];
+  // version >= 9
+  bool kill_by_memory_with_dump = 14 [(ras.encoding.field) = {
+    order: 14,
+    version: 9,
+  }];
+
+}

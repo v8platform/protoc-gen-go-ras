@@ -1,43 +1,20 @@
 syntax = "proto3";
 
-package tests;
+package ras.protocol.v1;
 
-import "google/protobuf/any.proto";
-import "google/protobuf/descriptor.proto";
 import "ras.proto";
-import "serialize/cluster.proto";
 
 option csharp_namespace = "ras.protocol.v1";
-option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen";
+option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen/ras/protocol/v1";
 
-// Порядок кодирования/декодирования в формат RAS
-message Packet {
+enum EndpointDataType {
 
-  option (ras.encoding.options).generate_packet_helpers = true;
-
-  PacketType type = 1 [(ras.encoding.field) = {
-    encoder: "byte",
-    order: 1,
-  }
-  ];
-
-  int32 size = 2 [(ras.encoding.field) = {
-    encoder: "size",
-    order: 2,
-  }];
-
-  bytes data = 3 [(ras.encoding.field) = {
-    encoder: "bytes",
-    order: 3,
-    size_field: 2,
-    version: 3,
-  }];
+  ENDPOINT_DATA_TYPE_VOID_MESSAGE = 0 [(ras.encoding.type_url) = "ras.protocol.v1.EndpointVoidDataMessage"];
+  ENDPOINT_DATA_TYPE_MESSAGE = 1 [(ras.encoding.type_url) = "ras.protocol.v1.EndpointDataMessage"];
+  ENDPOINT_DATA_TYPE_EXCEPTION = 255 [(ras.encoding.type_url) = "ras.protocol.v1.EndpointFailureMessage"];
 }
 
-
 enum PacketType {
-  option(ras.encoding.message_option) = "packet_type";
-
   PACKET_TYPE_NEGOTIATE = 0 [(ras.encoding.type_url) = "ras.protocol.v1.NegotiateMessage"];
   PACKET_TYPE_CONNECT = 1 [(ras.encoding.type_url) = "ras.protocol.v1.ConnectMessage"];
   PACKET_TYPE_CONNECT_ACK = 2 [(ras.encoding.type_url) = "ras.protocol.v1.ConnectMessageAck"];
