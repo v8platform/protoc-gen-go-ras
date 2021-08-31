@@ -20,8 +20,11 @@ func (gen *Generator) genFormatter(g *protogen.GeneratedFile, m *protogen.Messag
 	}
 
 	if ext != nil && ext.GetGenerateIoWriteTo() {
-		g.P("func (x *", m.GoIdent, ") WriteTo  (writer io.Writer, version int32) error {")
-		g.P("return nil ")
+		g.P("func (x *", m.GoIdent, ") WriteTo (w io.Writer) (int64, error) {")
+		g.P("buf := &", bytesBuffer, "{}")
+		g.P("if err := x.", gen.formatFuncName, "(buf, 0); err != nil { return 0, err }")
+		g.P("n, err := w.Write(buf.Bytes())")
+		g.P("return int64(n), err")
 		g.P("}")
 		g.Unskip()
 	}

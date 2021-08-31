@@ -79,3 +79,33 @@ func GetEnumExtensionFor(m proto.Message) *EnumExtension {
 
 	return &EnumExtension{messageOption}
 }
+
+func GetIsClientExtensionFor(m proto.Message) bool {
+
+	opts := m.(*descriptorpb.ServiceOptions)
+	if opts == nil || !proto.HasExtension(opts, plugin.E_Client) {
+		return false
+	}
+
+	ext := proto.GetExtension(opts, plugin.E_Client).(*plugin.ClientOptions)
+
+	return ext.IsClient
+}
+
+type ClientMethodOptions struct {
+	NoPacketPack bool
+}
+
+func GetClientMethodExtensionFor(m proto.Message) ClientMethodOptions {
+
+	opts := m.(*descriptorpb.MethodOptions)
+	if opts == nil || !proto.HasExtension(opts, plugin.E_Method) {
+		return ClientMethodOptions{}
+	}
+
+	ext := proto.GetExtension(opts, plugin.E_Method).(*plugin.ClientMethodOptions)
+
+	return ClientMethodOptions{
+		NoPacketPack: ext.GetNoPacketPack(),
+	}
+}

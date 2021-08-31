@@ -14,6 +14,7 @@ option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen/ras/proto
 // Порядок кодирования/декодирования в формат RAS
 message Packet {
   option (ras.encoding.options).generate_packet_helpers = true;
+  option (ras.encoding.options).generate_io_write_to = true;
   PacketType type = 1 [(ras.encoding.field) = {
       encoder: "byte",
       order: 1,

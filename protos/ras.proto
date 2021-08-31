@@ -17,6 +17,11 @@ extend google.protobuf.OneofOptions {
 
 extend google.protobuf.MessageOptions {
   EncodingMessageOptions options = 475223889;
+  ClientMessageOptions client_options = 475223890;
+}
+
+message ClientMessageOptions {
+  bool impl = 1; // Указания на интерфейс
 }
 
 message EncodingMessageOptions  {

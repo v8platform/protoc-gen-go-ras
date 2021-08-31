@@ -36,9 +36,10 @@ message EndpointOpenAck {
 }
 
 message Endpoint {
+  option (encoding.options).generate_endpoint_helpers = true;
   string service = 1;
-  string version = 2;
-  int32 endpoint_id = 3;
+  int32 version = 2;
+  int32 id = 3;
   int32 format = 4;
   map<string, Param> params = 5;
 }
@@ -49,6 +50,7 @@ message EndpointClose {
 
 message EndpointMessage {
   option (encoding.options).packet_type = "PACKET_TYPE_ENDPOINT_MESSAGE";
+  option (encoding.options).generate_endpoint_message_helpers = true;
   int32 endpoint_id = 1 [(ras.encoding.field) = {
     order: 1,
     encoder: "nullable",

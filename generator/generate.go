@@ -91,6 +91,30 @@ func NewGenerator(plugin *protogen.Plugin) *Generator {
 	return gen
 }
 
+func (gen *Generator) generateClient(file *protogen.File) {
+	// GenerateFile generates a .mock.pb.go file containing gRPC service definitions.
+	if !file.Generate {
+		return
+	}
+	if len(file.Services) == 0 {
+		return
+	}
+	// fmt.Println("FILENAME ", file.GeneratedFilenamePrefix)
+	filename := file.GeneratedFilenamePrefix + "_client.pb.go"
+	g := gen.plugin.NewGeneratedFile(filename, file.GoImportPath)
+	g.Skip()
+	mockGenerator := clientGenerator{
+		Generator: gen,
+		gen:       gen.plugin,
+		file:      file,
+		g:         g,
+	}
+	mockGenerator.genHeader(string(file.GoPackageName))
+	mockGenerator.GenerateFileContent()
+	return
+
+}
+
 func (gen *Generator) fill() {
 
 	gen.idxObject = make(map[string]Object)
@@ -220,6 +244,8 @@ func (gen *Generator) GenerateFile(plugin *protogen.Plugin, file *protogen.File)
 		//log.Println(message)
 		gen.genMessage(g, message)
 	}
+
+	gen.generateClient(file)
 
 }
 
