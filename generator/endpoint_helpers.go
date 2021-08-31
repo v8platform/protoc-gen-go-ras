@@ -68,30 +68,10 @@ func (gen *Generator) generateEndpointMessageHelpers(g *protogen.GeneratedFile, 
 	g.P("}")
 	g.P("}")
 	g.P()
-	// g.Annotate(m.GoIdent.GoName, m.Location)
-	// g.P("func (x *", m.GoIdent, ") UnpackNew() (interface{}, error) {")
-	// g.P("var into interface{}")
-	// g.P("switch x.GetType() {")
-	//
-	// for enumName, object := range gen.enumToObject {
-	// 	if strings.HasPrefix(enumName, "MESSAGE_TYPE") {
-	// 		enumIdent := gen.EnumNamed(enumName)
-	// 		g.P("// type ", enumIdent.GoName, " cast ", object.GoName)
-	// 		g.P("case ", enumIdent.GoIdent, " :")
-	// 		g.P("into = &", object.GoIdent, "{}")
-	// 	}
-	// }
-	//
-	// g.P("default: ")
-	// g.P("return nil, ", fmtErrorf, "(\"unknown unpack type %s\",  x.GetType())")
-	// g.P("}")
-	// g.P("buf := ", bytesNewBuffer, "(x.Data)")
-	// g.P("parser := into.(", messageParserName, ")")
-	// g.P("if err := parser.Parse(buf, 0); err != nil { return nil, err }")
-	// g.P("if err, ok := into.(error); ok { return nil, err }")
-	// g.P("return into, nil")
-	// g.P("}")
-	// g.P()
+
+	gen.AddImpl(messageFormatterName, m.GoIdent.GoImportPath)
+	gen.AddImpl(messageParserName, m.GoIdent.GoImportPath)
+
 	g.Unskip()
 }
 

@@ -12,6 +12,7 @@ extend google.protobuf.ServiceOptions {
 
 message ClientOptions {
   bool is_client = 1;
+  bool is_endpoint = 2;
 }
 
 extend google.protobuf.MethodOptions {
@@ -20,4 +21,6 @@ extend google.protobuf.MethodOptions {
 
 message ClientMethodOptions {
   bool no_packet_pack = 1;
+  map<string, string> param = 2;
+  bool ignore_empty = 3;
 }

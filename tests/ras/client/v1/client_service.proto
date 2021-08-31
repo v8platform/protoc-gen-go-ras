@@ -25,15 +25,15 @@ service ClientService {
 
 }
 
-message EndpointImpl {
-  option(ras.encoding.client_options).impl = true;
+service EndpointService {
+
+  option(client).is_endpoint = true;
+
+  rpc Message(protocol.v1.EndpointMessage) returns (google.protobuf.Empty) {
+    option(method).ignore_empty = true;
+    option(method).param = { key: "req", value: "EndpointMessageFormatter"};
+    option(method).param = { key: "resp", value: "EndpointMessageParser"};
+  };
+
 }
 
-message ClientImpl {
-  option(ras.encoding.client_options).impl = true;
-}
-
-message EndpointCreateRequest {
-  ClientImpl client = 1;
-  protocol.v1.EndpointOpenAck endpoint_open_ack = 2;
-}

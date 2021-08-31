@@ -91,8 +91,21 @@ func GetIsClientExtensionFor(m proto.Message) bool {
 
 	return ext.IsClient
 }
+func GetIsEndpointExtensionFor(m proto.Message) bool {
+
+	opts := m.(*descriptorpb.ServiceOptions)
+	if opts == nil || !proto.HasExtension(opts, plugin.E_Client) {
+		return false
+	}
+
+	ext := proto.GetExtension(opts, plugin.E_Client).(*plugin.ClientOptions)
+
+	return ext.IsEndpoint
+}
 
 type ClientMethodOptions struct {
+	MethodParams map[string]string
+	IgnoreEmpty  bool
 	NoPacketPack bool
 }
 
@@ -107,5 +120,43 @@ func GetClientMethodExtensionFor(m proto.Message) ClientMethodOptions {
 
 	return ClientMethodOptions{
 		NoPacketPack: ext.GetNoPacketPack(),
+		MethodParams: ext.GetParam(),
+		IgnoreEmpty:  ext.GetIgnoreEmpty(),
+	}
+}
+
+type ClientMessageOptions struct {
+	IsImpl bool
+}
+
+func GetClientMessageExtension(m proto.Message) ClientMessageOptions {
+
+	opts := m.(*descriptorpb.MessageOptions)
+	if opts == nil || !proto.HasExtension(opts, plugin.E_ClientOptions) {
+		return ClientMessageOptions{}
+	}
+
+	ext := proto.GetExtension(opts, plugin.E_ClientOptions).(*plugin.ClientMessageOptions)
+
+	return ClientMessageOptions{
+		IsImpl: ext.GetImpl(),
+	}
+}
+
+type FileImplOptions struct {
+	impl []string
+}
+
+func GetFileImplExtension(m proto.Message) FileImplOptions {
+
+	opts := m.(*descriptorpb.FileOptions)
+	if opts == nil || !proto.HasExtension(opts, plugin.E_Impl) {
+		return FileImplOptions{}
+	}
+
+	ext := proto.GetExtension(opts, plugin.E_Impl).(*plugin.FileImplOptions)
+
+	return FileImplOptions{
+		impl: ext.GetInterface(),
 	}
 }

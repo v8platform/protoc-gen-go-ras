@@ -26,6 +26,7 @@ type Generator struct {
 
 	idxObject             map[string]Object
 	idxMessage            map[string]*protogen.Message
+	idxImpl               map[string]protogen.GoIdent
 	idxMessageByEnumValue map[string]*protogen.Message
 	idxEnum               map[string]*protogen.Enum
 	idxEnumValues         map[string]*protogen.EnumValue
@@ -91,6 +92,38 @@ func NewGenerator(plugin *protogen.Plugin) *Generator {
 	return gen
 }
 
+func (gen *Generator) AddImpl(name string, path protogen.GoImportPath) {
+
+	_, ok := gen.idxImpl[name]
+	if !ok {
+		gen.idxImpl[name] = path.Ident(name)
+		return
+	}
+
+	// gen.Fail("find impl with name", name, " -> ", ident.String())
+
+}
+
+func (m *Generator) getIdentOrImpl(message *protogen.Message, g *protogen.GeneratedFile, prefix string) string {
+
+	if GetClientMessageExtension(message.Desc.Options()).IsImpl {
+		return prefix + g.QualifiedGoIdent(m.GetImpl(string(message.Desc.Name())))
+	}
+
+	return prefix + g.QualifiedGoIdent(message.GoIdent)
+}
+
+func (gen *Generator) GetImpl(name string) protogen.GoIdent {
+
+	ident, ok := gen.idxImpl[name]
+	if !ok {
+		gen.Fail("not find impl with name", name)
+	}
+
+	return ident
+
+}
+
 func (gen *Generator) generateClient(file *protogen.File) {
 	// GenerateFile generates a .mock.pb.go file containing gRPC service definitions.
 	if !file.Generate {
@@ -115,6 +148,31 @@ func (gen *Generator) generateClient(file *protogen.File) {
 
 }
 
+func (gen *Generator) generateEndpoint(file *protogen.File) {
+	// GenerateFile generates a .mock.pb.go file containing gRPC service definitions.
+	if !file.Generate {
+		return
+	}
+	if len(file.Services) == 0 {
+		return
+	}
+	// fmt.Println("FILENAME ", file.GeneratedFilenamePrefix)
+	filename := file.GeneratedFilenamePrefix + "_endpoint.pb.go"
+	g := gen.plugin.NewGeneratedFile(filename, file.GoImportPath)
+	g.Skip()
+	mockGenerator := endpointGenerator{
+		Generator: gen,
+		gen:       gen.plugin,
+		file:      file,
+		g:         g,
+	}
+	mockGenerator.genHeader(string(file.GoPackageName))
+	mockGenerator.GenerateFileContent()
+
+	return
+
+}
+
 func (gen *Generator) fill() {
 
 	gen.idxObject = make(map[string]Object)
@@ -122,6 +180,7 @@ func (gen *Generator) fill() {
 	gen.idxEnum = make(map[string]*protogen.Enum)
 	gen.idxEnumValues = make(map[string]*protogen.EnumValue)
 	gen.idxMessage = make(map[string]*protogen.Message)
+	gen.idxImpl = make(map[string]protogen.GoIdent)
 
 	for _, f := range gen.plugin.Files {
 		dottedPkg := "." + string(f.Proto.GetPackage())
@@ -152,7 +211,11 @@ func (gen *Generator) fill() {
 			}
 
 			gen.idxMessage[string(message.Desc.Name())] = message
+		}
 
+		extImpl := GetFileImplExtension(f.Desc.Options())
+		for _, impl := range extImpl.impl {
+			gen.idxImpl[impl] = f.GoImportPath.Ident(impl)
 		}
 	}
 
@@ -246,6 +309,7 @@ func (gen *Generator) GenerateFile(plugin *protogen.Plugin, file *protogen.File)
 	}
 
 	gen.generateClient(file)
+	gen.generateEndpoint(file)
 
 }
 
