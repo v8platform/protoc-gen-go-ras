@@ -82,16 +82,33 @@ func (m messageServiceGenerator) genDefinition(service *protogen.Service) {
 
 func (m messageServiceGenerator) genMethodHandler(service *protogen.Service, method *protogen.Method) {
 
-	m.g.P("func (x *", m.getServiceName(service), ") ", method.GoName, "(req *", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error) {")
+	endpointRequest := "EndpointRequest"
 
+	m.g.P("func (x *", m.getServiceName(service), ") ", method.GoName, "(req *", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error) {")
+	m.g.P()
 	m.g.P("var resp ", method.Output.GoIdent)
-	if isEmptyPb(method.Output.Desc) {
-		m.g.P("if err := x.e.Request(req, nil); err != nil { return nil, err }")
-	} else {
-		m.g.P("if err := x.e.Request(req, &resp); err != nil { return nil, err }")
-	}
+	m.g.P()
+	m.g.P("anyRequest, err := ", anypbPackage.Ident("New"), "(req)")
+	m.g.P("if err != nil { return nil, err }")
+	m.g.P()
+	m.g.P("anyRespond, err := ", anypbPackage.Ident("New"), "(&resp)")
+	m.g.P("if err != nil { return nil, err }")
+	m.g.P()
+	m.g.P("endpointRequest := &", endpointRequest, "{")
+	m.g.P("Request: anyRequest,")
+	m.g.P("Respond: anyRespond,")
+	m.g.P("}")
+	m.g.P("response, err := x.e.Request(endpointRequest)")
+	m.g.P("if err != nil { return nil, err }")
+	m.g.P()
+	m.g.P("if err := ", anypbPackage.Ident("UnmarshalTo"),
+		"(response, &resp,", protoPackage.Ident("UnmarshalOptions"), "{}); err != nil {")
+	m.g.P("return nil, err")
+	m.g.P("}")
 	m.g.P("return &resp, nil")
 	m.g.P("}")
+	m.g.P()
+
 }
 
 func (m messageServiceGenerator) getServiceName(service *protogen.Service) string {

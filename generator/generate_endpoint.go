@@ -1,11 +1,9 @@
 package generator
 
 import (
-	"fmt"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
-	"strings"
 )
 
 type endpointGenerator struct {
@@ -51,7 +49,7 @@ func (m endpointGenerator) genImpl(service *protogen.Service) {
 
 	m.g.P("type ", m.getClientImp(service), " interface {")
 	for _, method := range service.Methods {
-		m.g.P("", method.GoName, m.genMethodSig(method))
+		m.g.P(method.GoName, "(*", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error)")
 	}
 
 	m.g.P()
@@ -61,29 +59,6 @@ func (m endpointGenerator) genImpl(service *protogen.Service) {
 
 }
 
-func (m endpointGenerator) genMethodSig(method *protogen.Method) string {
-
-	ext := GetClientMethodExtension(method.Desc.Options())
-
-	inParam := ""
-	outParam := "(*" + m.g.QualifiedGoIdent(method.Output.GoIdent) + ", error)"
-	if len(ext.MethodParams) > 0 {
-
-		var p []string
-		for varName, varValue := range ext.MethodParams {
-			p = append(p, fmt.Sprintf("%s %s", varName, m.g.QualifiedGoIdent(m.GetImpl(varValue))))
-		}
-
-		inParam = strings.Join(p, ", ")
-	}
-
-	if ext.IgnoreEmpty {
-		outParam = "error"
-	}
-
-	return fmt.Sprintf("(%s) %s", inParam, outParam)
-}
-
 func (m endpointGenerator) genConstructor(service *protogen.Service) {
 	clientServiceImpl := m.GetImpl("ClientServiceImpl")
 	endpointImpl := m.GetImpl("EndpointImpl")
@@ -91,11 +66,12 @@ func (m endpointGenerator) genConstructor(service *protogen.Service) {
 	serviceName := m.getClientName(service)
 
 	m.g.P("func New", serviceName, "(clientService ", clientServiceImpl, ", endpoint ", endpointImpl, ") ", m.getClientImp(service), "{")
-	m.g.P("return &", serviceName, "{")
+	m.g.P("return &", unexport(serviceName), "{")
 	m.g.P("endpoint,")
 	m.g.P("clientService,")
 	m.g.P("}")
 	m.g.P("}")
+	m.g.P()
 
 }
 
@@ -110,7 +86,7 @@ func (m endpointGenerator) genDefinition(service *protogen.Service) {
 		m.g.P(deprecationComment)
 	}
 	m.g.Annotate(serviceName, service.Location)
-	m.g.P("type ", serviceName, " struct {")
+	m.g.P("type ", unexport(serviceName), " struct {")
 	m.g.P("", endpointImpl, "")
 	m.g.P("client ", clientServiceImpl, "")
 	m.g.P("}")
@@ -121,16 +97,35 @@ func isEmptyPb(m protoreflect.MessageDescriptor) bool {
 	return m.FullName() == "google.protobuf.Empty"
 }
 func (m endpointGenerator) genMethodHandler(service *protogen.Service, method *protogen.Method) {
-	_ = GetClientMethodExtension(method.Desc.Options())
 
-	m.g.P("func (x *", m.getClientName(service), ") ", method.GoName, m.genMethodSig(method), " {")
-	m.g.P("reqMessage, err := x.NewMessage(req)")
-	m.g.P("if err != nil { return err }")
-	m.g.P("if respMessage, err := x.client.EndpointMessage(reqMessage); err == nil {")
-	m.g.P("return x.UnpackMessage(respMessage, resp)")
+	endpointMessageParser := m.GetImpl("EndpointMessageParser")
+
+	m.g.P("func (x *", unexport(m.getClientName(service)), ") ", method.GoName, "(req *", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error) {")
+	m.g.P("message, err := ", anypbPackage.Ident("UnmarshalNew"),
+		"(req.GetRequest(),", protoPackage.Ident("UnmarshalOptions"), "{})")
+	m.g.P("if err != nil { return nil, err }")
+	m.g.P()
+	m.g.P("reqMessage, err := x.NewMessage(message)")
+	m.g.P("if err != nil { return nil, err }")
+	m.g.P()
+	m.g.P("respMessage, err := x.client.EndpointMessage(reqMessage) ")
+	m.g.P("if err != nil { return nil, err }")
+	m.g.P()
+	m.g.P("respProtoMessage, err := ", anypbPackage.Ident("UnmarshalNew"),
+		"(req.GetRespond(),", protoPackage.Ident("UnmarshalOptions"), "{})")
+	m.g.P("if err != nil { return nil, err }")
+	m.g.P()
+	m.g.P("if _, ok := respProtoMessage.(*", emptypbPackage.Ident("Empty"), "); ok {")
+	m.g.P("if err := x.UnpackMessage(respMessage, nil); err != nil { return nil, err }")
+	m.g.P("return ", anypbPackage.Ident("New"), "(respProtoMessage)")
 	m.g.P("}")
-	m.g.P("return err")
+	m.g.P()
+	m.g.P("messageParser, ok := respProtoMessage.(", endpointMessageParser, ")")
+	m.g.P("if !ok { return nil, ", fmtErrorf, "(\"not parser interface\") }")
+	m.g.P("if err := x.UnpackMessage(respMessage, messageParser); err != nil { return nil, err }")
+	m.g.P("return ", anypbPackage.Ident("New"), "(respProtoMessage)")
 	m.g.P("}")
+
 }
 
 func (m endpointGenerator) getClientName(service *protogen.Service) string {

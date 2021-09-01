@@ -3,15 +3,17 @@ package generator
 import "google.golang.org/protobuf/compiler/protogen"
 
 const (
-	reflectPackage = protogen.GoImportPath("reflect")
-	fmtPackage     = protogen.GoImportPath("fmt")
-	bytesPackage   = protogen.GoImportPath("bytes")
-	stringsPackage = protogen.GoImportPath("strings")
-	syncPackage    = protogen.GoImportPath("sync")
-	timePackage    = protogen.GoImportPath("time")
-	regexpPackage  = protogen.GoImportPath("regexp")
-	netPackage     = protogen.GoImportPath("net")
-
+	reflectPackage     = protogen.GoImportPath("reflect")
+	fmtPackage         = protogen.GoImportPath("fmt")
+	bytesPackage       = protogen.GoImportPath("bytes")
+	stringsPackage     = protogen.GoImportPath("strings")
+	syncPackage        = protogen.GoImportPath("sync")
+	timePackage        = protogen.GoImportPath("time")
+	regexpPackage      = protogen.GoImportPath("regexp")
+	netPackage         = protogen.GoImportPath("net")
+	anypbPackage       = protogen.GoImportPath("google.golang.org/protobuf/types/known/anypb")
+	protoPackage       = protogen.GoImportPath("google.golang.org/protobuf/proto")
+	emptypbPackage     = protogen.GoImportPath("google.golang.org/protobuf/types/known/emptypb")
 	deprecationComment = "// Deprecated: Do not use."
 )
 

@@ -232,6 +232,7 @@ func (r rasGenerator) generateNegotiateHelpers(m *protogen.Message) {
 	r.g.P("const (")
 	r.g.P("Magic int32 = 475223888")
 	r.g.P("ProtocolVersion int32 = 256")
+	r.g.P("ServiceName string  = \"v8.service.Admin.Cluster\"")
 	r.g.P(")")
 	r.g.P()
 	r.g.P("func New", m.GoIdent.GoName, "() *", m.GoIdent, "{")
