@@ -8,7 +8,6 @@ import "client.proto";
 import "ras.proto";
 option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen/ras/client/v1";
 
-
 service ClientService {
 
   option(client).is_client = true;
@@ -23,13 +22,17 @@ service ClientService {
   rpc EndpointClose(protocol.v1.EndpointClose) returns (google.protobuf.Empty) {};
   rpc EndpointMessage(protocol.v1.EndpointMessage) returns (protocol.v1.EndpointMessage) {};
 
+  rpc NewEndpoint(protocol.v1.EndpointOpenAck) returns (protocol.v1.Endpoint) {
+      option(method).new_endpoint_func = true;
+  };
+
 }
 
 service EndpointService {
 
   option(client).is_endpoint = true;
 
-  rpc Message(protocol.v1.EndpointMessage) returns (google.protobuf.Empty) {
+  rpc Request(protocol.v1.EndpointMessage) returns (protocol.v1.EndpointMessage) {
     option(method).ignore_empty = true;
     option(method).param = { key: "req", value: "EndpointMessageFormatter"};
     option(method).param = { key: "resp", value: "EndpointMessageParser"};

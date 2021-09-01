@@ -10,6 +10,9 @@ const (
 	syncPackage    = protogen.GoImportPath("sync")
 	timePackage    = protogen.GoImportPath("time")
 	utf8Package    = protogen.GoImportPath("unicode/utf8")
+	netPackage     = protogen.GoImportPath("net")
+
+	deprecationComment = "// Deprecated: Do not use."
 )
 
 var (
@@ -21,6 +24,7 @@ var (
 
 const (
 	encoderPackage = protogen.GoImportPath("github.com/v8platform/encoder/ras/codec256")
+	castPackage    = protogen.GoImportPath("github.com/spf13/cast")
 	ioPackage      = protogen.GoImportPath("io")
 )
 

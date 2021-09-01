@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package ras.messages.v1;
+
+import "ras.proto";
+import "ras/messages/v1/types.proto";
+import "ras/serialize/v1/infobases.proto";
+
+option csharp_namespace = "ras.messages.v1";
+option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen/ras/messages/v1";
+
+message GetInfobasesShortRequest {
+  option (encoding.options).message_type = "GET_INFOBASES_SHORT_REQUEST";
+  string cluster_id = 1 [(ras.encoding.field) = {order: 1, encoder: "uuid"}
+  ];
+}
+
+message GetInfobasesShortResponse {
+  option (encoding.options).message_type = "GET_INFOBASES_SHORT_RESPONSE";
+  repeated v8platform.serialize.v1.InfobaseSummaryInfo infobases = 1 [(ras.encoding.field) = {
+    order: 1,
+  }];;
+}

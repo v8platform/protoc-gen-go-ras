@@ -5,7 +5,6 @@ import (
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
-	"log"
 	"strings"
 )
 
@@ -23,7 +22,7 @@ func (m endpointGenerator) GenerateFileContent() {
 	}
 
 	for _, service := range m.file.Services {
-		if GetIsEndpointExtensionFor(service.Desc.Options()) {
+		if GetIsEndpointExtension(service.Desc.Options()) {
 			m.genService(service)
 		}
 	}
@@ -50,21 +49,21 @@ func (m endpointGenerator) genHeader(packageName string) {
 }
 func (m endpointGenerator) genImpl(service *protogen.Service) {
 
-	log.Println(m.idxImpl)
-
 	m.g.P("type ", m.getClientImp(service), " interface {")
 	for _, method := range service.Methods {
 		m.g.P("", method.GoName, m.genMethodSig(method))
 	}
+
+	m.g.P()
 	m.g.P("}")
 
-	m.AddImpl(m.getClientImp(service), protogen.GoImportPath(m.file.GoPackageName))
+	m.AddImpl(m.getClientImp(service), m.file.GoImportPath)
 
 }
 
 func (m endpointGenerator) genMethodSig(method *protogen.Method) string {
 
-	ext := GetClientMethodExtensionFor(method.Desc.Options())
+	ext := GetClientMethodExtension(method.Desc.Options())
 
 	inParam := ""
 	outParam := "(*" + m.g.QualifiedGoIdent(method.Output.GoIdent) + ", error)"
@@ -87,12 +86,14 @@ func (m endpointGenerator) genMethodSig(method *protogen.Method) string {
 
 func (m endpointGenerator) genConstructor(service *protogen.Service) {
 	clientServiceImpl := m.GetImpl("ClientServiceImpl")
+	endpointImpl := m.GetImpl("EndpointImpl")
+
 	serviceName := m.getClientName(service)
 
-	m.g.P("func New", serviceName, "(clientService ", clientServiceImpl, ", version int32) ", m.getClientImp(service), "{")
+	m.g.P("func New", serviceName, "(clientService ", clientServiceImpl, ", endpoint ", endpointImpl, ") ", m.getClientImp(service), "{")
 	m.g.P("return &", serviceName, "{")
-	m.g.P("client: clientService,")
-	m.g.P("Version: version,")
+	m.g.P("endpoint,")
+	m.g.P("clientService,")
 	m.g.P("}")
 	m.g.P("}")
 
@@ -101,6 +102,7 @@ func (m endpointGenerator) genConstructor(service *protogen.Service) {
 func (m endpointGenerator) genDefinition(service *protogen.Service) {
 	serviceName := m.getClientName(service)
 	clientServiceImpl := m.GetImpl("ClientServiceImpl")
+	endpointImpl := m.GetImpl("EndpointImpl")
 
 	m.g.P("// ", serviceName, " is the endpoint service for RAS service.")
 	if service.Desc.Options().(*descriptorpb.ServiceOptions).GetDeprecated() {
@@ -109,43 +111,8 @@ func (m endpointGenerator) genDefinition(service *protogen.Service) {
 	}
 	m.g.Annotate(serviceName, service.Location)
 	m.g.P("type ", serviceName, " struct {")
+	m.g.P("", endpointImpl, "")
 	m.g.P("client ", clientServiceImpl, "")
-	m.g.P("Version int32")
-	m.g.P("}")
-	m.g.P()
-}
-
-func (m endpointGenerator) genClientOptionsDefinition(service *protogen.Service) {
-	// Server registration.
-	if service.Desc.Options().(*descriptorpb.ServiceOptions).GetDeprecated() {
-		m.g.P(deprecationComment)
-	}
-	optionName := m.getClientOptionName(service)
-	optionsName := m.getClientOptionsName(service)
-	m.g.P("type ", optionName, " func(*", optionsName, ")")
-	m.g.P()
-	m.g.P("type ", optionsName, " struct {")
-	m.g.P("dialer *", netPackage.Ident("Dialer"), "")
-	m.g.P("}")
-	m.g.P()
-	m.g.P("func WithDialer(dialer *", netPackage.Ident("Dialer"), ") ", optionName, " {")
-	m.g.P("return func (o *", optionsName, ") { o.dialer = dialer }")
-	m.g.P("}")
-
-}
-
-func (m endpointGenerator) genDialMethodFunction(service *protogen.Service) {
-	m.g.P("func (x *", m.getClientName(service), ") dial() error {")
-	m.g.P("if x.conn != nil { return nil }")
-	m.g.P("if _, err :=", netPackage.Ident("ResolveTCPAddr"), "(\"tcp\", x.host); err != nil { return err }")
-	m.g.P()
-	m.g.P("var err error")
-	m.g.P("if x.dialer != nil { ")
-	m.g.P("x.conn, err = x.dialer.Dial(\"tcp\", x.host)")
-	m.g.P("return err")
-	m.g.P("}")
-	m.g.P("x.conn, err = ", netPackage.Ident("Dial"), "(\"tcp\", x.host)")
-	m.g.P("return err")
 	m.g.P("}")
 	m.g.P()
 }
@@ -154,30 +121,16 @@ func isEmptyPb(m protoreflect.MessageDescriptor) bool {
 	return m.FullName() == "google.protobuf.Empty"
 }
 func (m endpointGenerator) genMethodHandler(service *protogen.Service, method *protogen.Method) {
-	ext := GetClientMethodExtensionFor(method.Desc.Options())
+	_ = GetClientMethodExtension(method.Desc.Options())
 
-	m.g.P("func (x *", m.getClientName(service), ") ", method.GoName, "(req *", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error) {")
-	m.g.P("if err := x.dial(); err != nil { return nil, err }")
-	if ext.NoPacketPack {
-		m.g.P("// TODO convert to formatter")
-		m.g.P("if err := req.", m.formatFuncName, "(x.conn, 0 ); err != nil { return nil, err }")
-	} else {
-		m.g.P("packet, err := ", method.Input.GoIdent.GoImportPath.Ident("NewPacket"), "(req)")
-		m.g.P("if err != nil { return nil, err }")
-		m.g.P("if _, err := packet.WriteTo(x.conn); err != nil { return nil, err }")
-	}
-	if isEmptyPb(method.Output.Desc) {
-		m.g.P("return new(", method.Output.GoIdent, "), nil")
-		m.g.P("}")
-		return
-	}
-	m.g.P("if err := x.conn.SetReadDeadline(time.Now().Add(5 * ", timePackage.Ident("Second"), ")); err != nil { return nil, err }")
-	m.g.P("ackPacket, err := ", method.Input.GoIdent.GoImportPath.Ident("NewPacket"), "(x.conn)")
-	m.g.P("if err != nil { return nil, err }")
-	m.g.P("resp := new(", method.Output.GoIdent, ")")
-	m.g.P("return resp, ackPacket.Unpack(resp)")
+	m.g.P("func (x *", m.getClientName(service), ") ", method.GoName, m.genMethodSig(method), " {")
+	m.g.P("reqMessage, err := x.NewMessage(req)")
+	m.g.P("if err != nil { return err }")
+	m.g.P("if respMessage, err := x.client.EndpointMessage(reqMessage); err == nil {")
+	m.g.P("return x.UnpackMessage(respMessage, resp)")
 	m.g.P("}")
-	m.g.P()
+	m.g.P("return err")
+	m.g.P("}")
 }
 
 func (m endpointGenerator) getClientName(service *protogen.Service) string {

@@ -12,30 +12,20 @@ type MessageFieldExtension struct {
 }
 
 type MessageExtension struct {
-	*plugin.EncodingMessageOptions
-
-	//PacketType       string
-	//MessageType      string
-	//EndpointDataType string
-	//GenerateEmpty bool
+	GenerateEmpty                  bool
+	GeneratePacketHelpers          bool
+	GenerateEndpointMessageHelpers bool
+	GenerateMessageHelpers         bool
+	PacketType                     string
+	EndpointDataType               string
+	MessageType                    string
+	GenerateErrorFn                bool
+	GenerateEndpointHelpers        bool
+	GenerateIoWriteTo              bool
 }
 
 func (e *MessageExtension) GetTypeOption(gen *Generator) *protogen.EnumValue {
 
-	if e.EncodingMessageOptions == nil {
-		return nil
-	}
-
-	switch e.Type.(type) {
-	case *plugin.EncodingMessageOptions_PacketType:
-		return gen.idxEnumValues[e.GetPacketType()]
-	case *plugin.EncodingMessageOptions_EndpointDataType:
-		return gen.idxEnumValues[e.GetEndpointDataType()]
-	case *plugin.EncodingMessageOptions_MessageType:
-		return gen.idxEnumValues[e.GetMessageType()]
-	default:
-		//log.Fatalln("Error type option", e)
-	}
 	return nil
 }
 
@@ -55,20 +45,31 @@ func GetMessageFieldExtensionFor(m proto.Message) *MessageFieldExtension {
 	return &MessageFieldExtension{ext}
 }
 
-func GetMessageExtensionFor(m proto.Message) *MessageExtension {
+func GetMessageExtension(m proto.Message) MessageExtension {
 
 	opts, _ := m.(*descriptorpb.MessageOptions)
 
 	if opts == nil || !proto.HasExtension(opts, plugin.E_Options) {
-		return nil
+		return MessageExtension{}
 	}
 
 	ext := proto.GetExtension(opts, plugin.E_Options).(*plugin.EncodingMessageOptions)
 
-	return &MessageExtension{ext}
+	return MessageExtension{
+		GenerateEmpty:                  ext.GetGenerateEmpty(),
+		GeneratePacketHelpers:          ext.GetGeneratePacketHelpers(),
+		GenerateEndpointMessageHelpers: ext.GetGenerateEndpointMessageHelpers(),
+		GenerateEndpointHelpers:        ext.GetGenerateEndpointHelpers(),
+		GenerateMessageHelpers:         ext.GetGenerateMessageHelpers(),
+		PacketType:                     ext.GetPacketType(),
+		EndpointDataType:               ext.GetEndpointDataType(),
+		MessageType:                    ext.GetMessageType(),
+		GenerateErrorFn:                ext.GetGenerateErrorFn(),
+		GenerateIoWriteTo:              ext.GetGenerateIoWriteTo(),
+	}
 }
 
-func GetEnumExtensionFor(m proto.Message) *EnumExtension {
+func GetEnumExtension(m proto.Message) *EnumExtension {
 
 	opts := m.(*descriptorpb.EnumOptions)
 	if opts == nil || !proto.HasExtension(opts, plugin.E_MessageOption) {
@@ -80,7 +81,7 @@ func GetEnumExtensionFor(m proto.Message) *EnumExtension {
 	return &EnumExtension{messageOption}
 }
 
-func GetIsClientExtensionFor(m proto.Message) bool {
+func GetIsClientExtension(m proto.Message) bool {
 
 	opts := m.(*descriptorpb.ServiceOptions)
 	if opts == nil || !proto.HasExtension(opts, plugin.E_Client) {
@@ -89,9 +90,9 @@ func GetIsClientExtensionFor(m proto.Message) bool {
 
 	ext := proto.GetExtension(opts, plugin.E_Client).(*plugin.ClientOptions)
 
-	return ext.IsClient
+	return ext.GetIsClient()
 }
-func GetIsEndpointExtensionFor(m proto.Message) bool {
+func GetIsEndpointExtension(m proto.Message) bool {
 
 	opts := m.(*descriptorpb.ServiceOptions)
 	if opts == nil || !proto.HasExtension(opts, plugin.E_Client) {
@@ -100,16 +101,28 @@ func GetIsEndpointExtensionFor(m proto.Message) bool {
 
 	ext := proto.GetExtension(opts, plugin.E_Client).(*plugin.ClientOptions)
 
-	return ext.IsEndpoint
+	return ext.GetIsEndpoint()
+}
+
+func GetIsRequestServiceExtension(m proto.Message) bool {
+
+	opts := m.(*descriptorpb.ServiceOptions)
+	if opts == nil || !proto.HasExtension(opts, plugin.E_Client) {
+		return false
+	}
+
+	ext := proto.GetExtension(opts, plugin.E_Client).(*plugin.ClientOptions)
+	return ext.GetIsRequestService()
 }
 
 type ClientMethodOptions struct {
-	MethodParams map[string]string
-	IgnoreEmpty  bool
-	NoPacketPack bool
+	MethodParams    map[string]string
+	IgnoreEmpty     bool
+	NoPacketPack    bool
+	NewEndpointFunc bool
 }
 
-func GetClientMethodExtensionFor(m proto.Message) ClientMethodOptions {
+func GetClientMethodExtension(m proto.Message) ClientMethodOptions {
 
 	opts := m.(*descriptorpb.MethodOptions)
 	if opts == nil || !proto.HasExtension(opts, plugin.E_Method) {
@@ -119,9 +132,10 @@ func GetClientMethodExtensionFor(m proto.Message) ClientMethodOptions {
 	ext := proto.GetExtension(opts, plugin.E_Method).(*plugin.ClientMethodOptions)
 
 	return ClientMethodOptions{
-		NoPacketPack: ext.GetNoPacketPack(),
-		MethodParams: ext.GetParam(),
-		IgnoreEmpty:  ext.GetIgnoreEmpty(),
+		NoPacketPack:    ext.GetNoPacketPack(),
+		MethodParams:    ext.GetParam(),
+		IgnoreEmpty:     ext.GetIgnoreEmpty(),
+		NewEndpointFunc: ext.GetNewEndpointFunc(),
 	}
 }
 

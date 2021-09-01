@@ -14,6 +14,7 @@ option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen/ras/proto
 
 option (encoding.impl).interface = "EndpointMessageFormatter";
 option (encoding.impl).interface = "EndpointMessageParser";
+option (encoding.impl).interface = "EndpointImpl";
 
 message EndpointOpen {
   option (encoding.options).packet_type = "PACKET_TYPE_ENDPOINT_OPEN";

@@ -6,16 +6,6 @@ import (
 	"strings"
 )
 
-const (
-	osPackage          = protogen.GoImportPath("os")
-	strConvPackage     = protogen.GoImportPath("strconv")
-	contextPackage     = protogen.GoImportPath("context")
-	protoPackage       = protogen.GoImportPath("github.com/golang/protobuf/proto")
-	grpcPackage        = protogen.GoImportPath("google.golang.org/grpc")
-	grpcHandlerPackage = protogen.GoImportPath("github.com/carvalhorr/protoc-gen-mock/grpchandler")
-	netPackage         = protogen.GoImportPath("net")
-)
-
 type clientGenerator struct {
 	*Generator
 	gen  *protogen.Plugin
@@ -30,7 +20,7 @@ func (m clientGenerator) GenerateFileContent() {
 	}
 
 	for _, service := range m.file.Services {
-		if GetIsClientExtensionFor(service.Desc.Options()) {
+		if GetIsClientExtension(service.Desc.Options()) {
 			m.genService(service)
 		}
 	}
@@ -61,10 +51,9 @@ func (m clientGenerator) genClientImpl(service *protogen.Service) {
 
 	m.g.P("type ", m.getClientImp(service), " interface {")
 	for _, method := range service.Methods {
-		m.g.P("", method.GoName, "(req *", method.Input.GoIdent, ") (resp *", method.Output.GoIdent, ", err error)")
+		m.g.P("", method.GoName, "(*", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error)")
 	}
 	m.g.P("}")
-
 	m.AddImpl(m.getClientImp(service), m.file.GoImportPath)
 
 }
@@ -140,7 +129,11 @@ func (m clientGenerator) genDialMethodFunction(service *protogen.Service) {
 }
 
 func (m clientGenerator) genMethodHandler(service *protogen.Service, method *protogen.Method) {
-	ext := GetClientMethodExtensionFor(method.Desc.Options())
+	ext := GetClientMethodExtension(method.Desc.Options())
+	if ext.NewEndpointFunc {
+		m.genNewEndpointFunc(service, method)
+		return
+	}
 
 	m.g.P("func (x *", m.getClientName(service), ") ", method.GoName, "(req *", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error) {")
 	m.g.P("if err := x.dial(); err != nil { return nil, err }")
@@ -162,6 +155,19 @@ func (m clientGenerator) genMethodHandler(service *protogen.Service, method *pro
 	m.g.P("if err != nil { return nil, err }")
 	m.g.P("resp := new(", method.Output.GoIdent, ")")
 	m.g.P("return resp, ackPacket.Unpack(resp)")
+	m.g.P("}")
+	m.g.P()
+}
+
+func (m clientGenerator) genNewEndpointFunc(service *protogen.Service, method *protogen.Method) {
+
+	m.g.P("func (x *", m.getClientName(service), ") ", method.GoName, "(req *", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error) {")
+	m.g.P("return &", method.Output.GoIdent, "{")
+	m.g.P("Service: req.GetService(),")
+	m.g.P("Version: ", castPackage.Ident("ToInt32"), "(", castPackage.Ident("ToFloat32"), "(req.GetVersion())),")
+	m.g.P("Id: req.GetEndpointId(),")
+	m.g.P("Format: ", codecVersion, "(),")
+	m.g.P("}, nil")
 	m.g.P("}")
 	m.g.P()
 }
