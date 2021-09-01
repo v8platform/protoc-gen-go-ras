@@ -22,6 +22,7 @@ type MessageExtension struct {
 	GenerateErrorFn                bool
 	GenerateEndpointHelpers        bool
 	GenerateIoWriteTo              bool
+	IsNegotiate                    bool
 }
 
 func (e *MessageExtension) GetTypeOption(gen *Generator) *protogen.EnumValue {
@@ -66,6 +67,7 @@ func GetMessageExtension(m proto.Message) MessageExtension {
 		MessageType:                    ext.GetMessageType(),
 		GenerateErrorFn:                ext.GetGenerateErrorFn(),
 		GenerateIoWriteTo:              ext.GetGenerateIoWriteTo(),
+		IsNegotiate:                    ext.GetIsNegotiate(),
 	}
 }
 

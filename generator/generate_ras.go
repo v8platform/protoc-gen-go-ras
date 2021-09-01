@@ -69,6 +69,10 @@ func (r rasGenerator) genMessageHelpers(message *protogen.Message, ext MessageEx
 		r.generateWriteToFunc(message)
 	}
 
+	if ext.IsNegotiate {
+		r.generateNegotiateHelpers(message)
+	}
+
 }
 
 func (r rasGenerator) genMessage(message *protogen.Message) {
@@ -223,6 +227,22 @@ func (r rasGenerator) generateEndpointHelpers(m *protogen.Message, ext MessageEx
 	g.Unskip()
 }
 
+func (r rasGenerator) generateNegotiateHelpers(m *protogen.Message) {
+
+	r.g.P("const (")
+	r.g.P("Magic int32 = 475223888")
+	r.g.P("ProtocolVersion int32 = 256")
+	r.g.P(")")
+	r.g.P()
+	r.g.P("func New", m.GoIdent.GoName, "() *", m.GoIdent, "{")
+	r.g.P("return &", m.GoIdent, "{")
+	r.g.P("Magic: Magic,")
+	r.g.P("Protocol: ProtocolVersion,")
+	r.g.P("Version:", codecVersion, "(),")
+	r.g.P("}")
+	r.g.P("}")
+	r.g.P()
+}
 func (r rasGenerator) generatePacketHelpers(m *protogen.Message, ext MessageExtension) {
 
 	if !ext.GeneratePacketHelpers {

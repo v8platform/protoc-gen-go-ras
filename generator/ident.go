@@ -9,7 +9,7 @@ const (
 	stringsPackage = protogen.GoImportPath("strings")
 	syncPackage    = protogen.GoImportPath("sync")
 	timePackage    = protogen.GoImportPath("time")
-	utf8Package    = protogen.GoImportPath("unicode/utf8")
+	regexpPackage  = protogen.GoImportPath("regexp")
 	netPackage     = protogen.GoImportPath("net")
 
 	deprecationComment = "// Deprecated: Do not use."

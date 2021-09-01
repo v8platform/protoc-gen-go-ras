@@ -33,6 +33,7 @@ func (m clientGenerator) genService(service *protogen.Service) {
 	m.genClientImpl(service)
 	m.genClientConstructor(service)
 	m.genClientDefinition(service)
+	m.genDetectSupportedVersion(service)
 	m.genClientOptionsDefinition(service)
 	m.genDialMethodFunction(service)
 
@@ -70,6 +71,7 @@ func (m clientGenerator) genClientConstructor(service *protogen.Service) {
 	m.g.P("return &", serviceName, "{")
 	m.g.P("host: host,")
 	m.g.P("Options: options,")
+	m.g.P("mu: &", syncPackage.Ident("Mutex"), "{},")
 	m.g.P("}")
 	m.g.P("}")
 
@@ -89,6 +91,37 @@ func (m clientGenerator) genClientDefinition(service *protogen.Service) {
 	m.g.P("*", optionsName, "")
 	m.g.P("host string")
 	m.g.P("conn ", netPackage.Ident("Conn"), "")
+	m.g.P("mu *", syncPackage.Ident("Mutex"), "")
+	m.g.P("}")
+	m.g.P()
+}
+
+func (m clientGenerator) genDetectSupportedVersion(service *protogen.Service) {
+	serviceName := m.getClientName(service)
+
+	m.g.Annotate(serviceName, service.Location)
+	m.g.P("var serviceVersions = []string{\"3.0\", \"4.0\", \"5.0\", \"6.0\", \"7.0\", \"8.0\", \"9.0\", \"10.0\"}")
+	m.g.P()
+	m.g.P("var re = ", regexpPackage.Ident("MustCompile"), "(`(?m)supported=(.*?)]`)")
+	m.g.P()
+	m.g.P("func (x *", serviceName, ") DetectSupportedVersion(err error) string {")
+	m.g.P()
+	m.g.P("fail, ok := err.(*", m.ObjectNamed("ras.protocol.v1.EndpointFailureAck").GoIdent, ")")
+	m.g.P("if !ok { return \"\" }")
+	m.g.P()
+	m.g.P("if fail.Cause == nil { return \"\" }")
+	m.g.P()
+	m.g.P("matches := re.FindAllString(fail.Cause.Message, -1)")
+	m.g.P()
+	m.g.P("if len(matches) == 0 { return \"\" }")
+	m.g.P()
+	m.g.P("supported := matches[0]")
+	m.g.P("for i := len(serviceVersions) - 1; i >= 0; i-- {")
+	m.g.P("version := serviceVersions[i]")
+	m.g.P("if ", stringsPackage.Ident("Contains"), "(supported, version) { return version }")
+	m.g.P("}")
+	m.g.P()
+	m.g.P("return \"\"")
 	m.g.P("}")
 	m.g.P()
 }
@@ -137,6 +170,8 @@ func (m clientGenerator) genMethodHandler(service *protogen.Service, method *pro
 
 	m.g.P("func (x *", m.getClientName(service), ") ", method.GoName, "(req *", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error) {")
 	m.g.P("if err := x.dial(); err != nil { return nil, err }")
+	m.g.P("x.mu.Lock()")
+	m.g.P("defer x.mu.Unlock()")
 	if ext.NoPacketPack {
 		m.g.P("// TODO convert to formatter")
 		m.g.P("if err := req.", m.formatFuncName, "(x.conn, 0 ); err != nil { return nil, err }")
@@ -170,6 +205,7 @@ func (m clientGenerator) genNewEndpointFunc(service *protogen.Service, method *p
 	m.g.P("}, nil")
 	m.g.P("}")
 	m.g.P()
+
 }
 
 func (m clientGenerator) getClientName(service *protogen.Service) string {
