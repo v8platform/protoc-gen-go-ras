@@ -54,6 +54,7 @@ func (m clientGenerator) genClientImpl(service *protogen.Service) {
 	for _, method := range service.Methods {
 		m.g.P("", method.GoName, "(*", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error)")
 	}
+	m.g.P("DetectSupportedVersion(err error) string")
 	m.g.P("}")
 	m.AddImpl(m.getClientImp(service), m.file.GoImportPath)
 
@@ -64,13 +65,13 @@ func (m clientGenerator) genClientConstructor(service *protogen.Service) {
 	optionName := m.getClientOptionName(service)
 
 	m.g.P("func New", serviceName, "(host string, opts... ", optionName, ") ", m.getClientImp(service), "{")
-	m.g.P("options := &", optionsName, "{}")
+	m.g.P("options := &", optionsName, "{ timeout: 5 * ", timePackage.Ident("Second"), "}")
 	m.g.P("for _, opt := range opts {")
 	m.g.P("opt(options)")
 	m.g.P("}")
-	m.g.P("return &", serviceName, "{")
+	m.g.P("return &", unexport(serviceName), "{")
 	m.g.P("host: host,")
-	m.g.P("Options: options,")
+	m.g.P("", optionsName, ": options,")
 	m.g.P("mu: &", syncPackage.Ident("Mutex"), "{},")
 	m.g.P("}")
 	m.g.P("}")
@@ -87,7 +88,7 @@ func (m clientGenerator) genClientDefinition(service *protogen.Service) {
 		m.g.P(deprecationComment)
 	}
 	m.g.Annotate(serviceName, service.Location)
-	m.g.P("type ", serviceName, " struct {")
+	m.g.P("type ", unexport(serviceName), " struct {")
 	m.g.P("*", optionsName, "")
 	m.g.P("host string")
 	m.g.P("conn ", netPackage.Ident("Conn"), "")
@@ -104,7 +105,7 @@ func (m clientGenerator) genDetectSupportedVersion(service *protogen.Service) {
 	m.g.P()
 	m.g.P("var re = ", regexpPackage.Ident("MustCompile"), "(`(?m)supported=(.*?)]`)")
 	m.g.P()
-	m.g.P("func (x *", serviceName, ") DetectSupportedVersion(err error) string {")
+	m.g.P("func (x *", unexport(serviceName), ") DetectSupportedVersion(err error) string {")
 	m.g.P()
 	m.g.P("fail, ok := err.(*", m.ObjectNamed("ras.protocol.v1.EndpointFailureAck").GoIdent, ")")
 	m.g.P("if !ok { return \"\" }")
@@ -137,16 +138,21 @@ func (m clientGenerator) genClientOptionsDefinition(service *protogen.Service) {
 	m.g.P()
 	m.g.P("type ", optionsName, " struct {")
 	m.g.P("dialer *", netPackage.Ident("Dialer"), "")
+	m.g.P("timeout ", timePackage.Ident("Duration"), "")
 	m.g.P("}")
 	m.g.P()
 	m.g.P("func WithDialer(dialer *", netPackage.Ident("Dialer"), ") ", optionName, " {")
 	m.g.P("return func (o *", optionsName, ") { o.dialer = dialer }")
 	m.g.P("}")
+	m.g.P()
+	m.g.P("func SetTimeout(timeout ", timePackage.Ident("Duration"), ") ", optionName, " {")
+	m.g.P("return func (o *", optionsName, ") { o.timeout = timeout }")
+	m.g.P("}")
 
 }
 
 func (m clientGenerator) genDialMethodFunction(service *protogen.Service) {
-	m.g.P("func (x *", m.getClientName(service), ") dial() error {")
+	m.g.P("func (x *", unexport(m.getClientName(service)), ") dial() error {")
 	m.g.P("if x.conn != nil { return nil }")
 	m.g.P("if _, err :=", netPackage.Ident("ResolveTCPAddr"), "(\"tcp\", x.host); err != nil { return err }")
 	m.g.P()
@@ -168,12 +174,11 @@ func (m clientGenerator) genMethodHandler(service *protogen.Service, method *pro
 		return
 	}
 
-	m.g.P("func (x *", m.getClientName(service), ") ", method.GoName, "(req *", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error) {")
+	m.g.P("func (x *", unexport(m.getClientName(service)), ") ", method.GoName, "(req *", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error) {")
 	m.g.P("if err := x.dial(); err != nil { return nil, err }")
 	m.g.P("x.mu.Lock()")
 	m.g.P("defer x.mu.Unlock()")
 	if ext.NoPacketPack {
-		m.g.P("// TODO convert to formatter")
 		m.g.P("if err := req.", m.formatFuncName, "(x.conn, 0 ); err != nil { return nil, err }")
 	} else {
 		m.g.P("packet, err := ", method.Input.GoIdent.GoImportPath.Ident("NewPacket"), "(req)")
@@ -185,7 +190,7 @@ func (m clientGenerator) genMethodHandler(service *protogen.Service, method *pro
 		m.g.P("}")
 		return
 	}
-	m.g.P("if err := x.conn.SetReadDeadline(time.Now().Add(5 * ", timePackage.Ident("Second"), ")); err != nil { return nil, err }")
+	m.g.P("if err := x.conn.SetReadDeadline(time.Now().Add(x.timeout)); err != nil { return nil, err }")
 	m.g.P("ackPacket, err := ", method.Input.GoIdent.GoImportPath.Ident("NewPacket"), "(x.conn)")
 	m.g.P("if err != nil { return nil, err }")
 	m.g.P("resp := new(", method.Output.GoIdent, ")")
@@ -196,7 +201,7 @@ func (m clientGenerator) genMethodHandler(service *protogen.Service, method *pro
 
 func (m clientGenerator) genNewEndpointFunc(service *protogen.Service, method *protogen.Method) {
 
-	m.g.P("func (x *", m.getClientName(service), ") ", method.GoName, "(req *", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error) {")
+	m.g.P("func (x *", unexport(m.getClientName(service)), ") ", method.GoName, "(req *", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error) {")
 	m.g.P("return &", method.Output.GoIdent, "{")
 	m.g.P("Service: req.GetService(),")
 	m.g.P("Version: ", castPackage.Ident("ToInt32"), "(", castPackage.Ident("ToFloat32"), "(req.GetVersion())),")
@@ -217,11 +222,11 @@ func (m clientGenerator) getClientImp(service *protogen.Service) string {
 }
 
 func (m clientGenerator) getClientOptionsName(service *protogen.Service) string {
-	return "Options"
+	return service.GoName + "Options"
 }
 
 func (m clientGenerator) getClientOptionName(service *protogen.Service) string {
-	return "Option"
+	return service.GoName + "Option"
 }
 
 func (m clientGenerator) getRemoteMockClientName(service *protogen.Service) string {

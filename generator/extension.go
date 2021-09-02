@@ -117,11 +117,23 @@ func GetIsRequestServiceExtension(m proto.Message) bool {
 	return ext.GetIsRequestService()
 }
 
+func GetIsRASServiceExtension(m proto.Message) bool {
+
+	opts := m.(*descriptorpb.ServiceOptions)
+	if opts == nil || !proto.HasExtension(opts, plugin.E_Client) {
+		return false
+	}
+
+	ext := proto.GetExtension(opts, plugin.E_Client).(*plugin.ClientOptions)
+	return ext.GetIsRasService()
+}
+
 type ClientMethodOptions struct {
 	MethodParams    map[string]string
 	IgnoreEmpty     bool
 	NoPacketPack    bool
 	NewEndpointFunc bool
+	ProxyName       string
 }
 
 func GetClientMethodExtension(m proto.Message) ClientMethodOptions {
@@ -138,6 +150,7 @@ func GetClientMethodExtension(m proto.Message) ClientMethodOptions {
 		MethodParams:    ext.GetParam(),
 		IgnoreEmpty:     ext.GetIgnoreEmpty(),
 		NewEndpointFunc: ext.GetNewEndpointFunc(),
+		ProxyName:       ext.GetProxyName(),
 	}
 }
 

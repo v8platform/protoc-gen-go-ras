@@ -69,7 +69,20 @@ func TestNewClientService(t *testing.T) {
 	if err != nil {
 		pp.Fatalln("sessions", err)
 	}
-	pp.Println(resp.Infobases)
+	// pp.Println(resp.Infobases)
+
+	rasService := v1.NewRasService(endpointService)
+
+	for _, infobase := range resp.Infobases {
+
+		pp.Println("Getting sessions for", infobase.Name)
+
+		respSession, err := rasService.GetInfobaseSessions(&v13.GetInfobaseSessionsRequest{ClusterId: clusters.Clusters[0].Uuid, InfobaseId: infobase.Uuid})
+		if err != nil {
+			pp.Fatalln("sessions", err)
+		}
+		pp.Println(respSession.Sessions)
+	}
 
 	// sessionService := v1.NewSessionsService(endpointService)
 	// sessions, err := sessionService.GetSessions(&v13.GetSessionsRequest{ClusterId: clusters.Clusters[0].Uuid})

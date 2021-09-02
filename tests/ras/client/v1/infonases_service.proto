@@ -11,5 +11,9 @@ service InfobasesService {
   option(client).is_request_service = true;
 
   rpc GetShortInfobases(messages.v1.GetInfobasesShortRequest) returns (messages.v1.GetInfobasesShortResponse) {};
+  rpc GetSessions(messages.v1.GetInfobaseSessionsRequest) returns (messages.v1.GetInfobaseSessionsResponse) {
+    option(method).proxy_name = "GetInfobaseSessions";
+  };
+
 }
 

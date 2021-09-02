@@ -148,7 +148,7 @@ func (gen *Generator) EnumNamed(typeName string) *protogen.EnumValue {
 	return o
 }
 
-func (gen *Generator) GenerateFile(plugin *protogen.Plugin, file *protogen.File) {
+func (gen *Generator) generateFile(file *protogen.File) {
 
 	if !file.Generate {
 		return
@@ -166,6 +166,45 @@ func (gen *Generator) GenerateFile(plugin *protogen.Plugin, file *protogen.File)
 
 }
 
+func (gen *Generator) Generate() {
+
+	for _, f := range gen.plugin.Files {
+		if f.Generate && shouldProcess(f) {
+			gen.generateFile(f)
+		}
+	}
+
+}
+
+func (gen *Generator) GenerateOnce() {
+
+	for _, f := range gen.plugin.Files {
+		if f.Generate && shouldProcess(f) {
+			gen.generateRasService(f)
+		}
+	}
+}
+
+func shouldProcess(file *protogen.File) bool {
+	ignoredFiles := []string{
+		"graphql/graphql.proto",
+		"graphql.proto",
+		"ras/encoding/ras.proto",
+		"ras/encoding/client.proto",
+		"ras/encoding/file.proto"}
+	for _, ignored := range ignoredFiles {
+		if *file.Proto.Name == ignored {
+
+			log.Println("ignore file", *file.Proto.Name)
+			return false
+		}
+	}
+	// if proto.HasExtension(file.Proto.Options, graphql.E_Disabled) {
+	// 	return !proto.GetExtension(file.Proto.Options, graphql.E_Disabled).(bool)
+	// }
+	return true
+}
+
 // Fail reports a problem and exits the program.
 func (gen *Generator) Fail(msgs ...string) {
 	s := strings.Join(msgs, " ")
@@ -178,6 +217,29 @@ func (gen *Generator) Error(err error, msgs ...string) {
 	s := strings.Join(msgs, " ") + ":" + err.Error()
 	log.Print("protoc-gen-go-ras: error:", s)
 	os.Exit(1)
+}
+
+func (gen *Generator) generateRasService(file *protogen.File) {
+
+	if len(file.Services) == 0 {
+		return
+	}
+
+	filename := file.GeneratedFilenamePrefix + "_ras.pb.go"
+	g := gen.plugin.NewGeneratedFile(filename, file.GoImportPath)
+	g.Skip()
+
+	gen.genHeader(g, string(file.GoPackageName))
+
+	generator := rasServiceGenerator{
+		Generator: gen,
+		gen:       gen.plugin,
+		file:      file,
+		g:         g,
+	}
+	generator.init()
+	generator.GenerateFileContent()
+
 }
 
 func (gen *Generator) generateRas(file *protogen.File, g *protogen.GeneratedFile) {
