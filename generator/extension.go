@@ -1,14 +1,15 @@
 package generator
 
 import (
-	"github.com/v8platform/protoc-gen-go-ras/plugin"
+	"github.com/v8platform/protoc-gen-go-ras/plugin/ras/client"
+	"github.com/v8platform/protoc-gen-go-ras/plugin/ras/encoding"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 type MessageFieldExtension struct {
-	*plugin.EncodingFieldOptions
+	*encoding.EncodingFieldOptions
 }
 
 type MessageExtension struct {
@@ -37,11 +38,11 @@ type EnumExtension struct {
 func GetMessageFieldExtensionFor(m proto.Message) *MessageFieldExtension {
 
 	opts := m.(*descriptorpb.FieldOptions)
-	if opts == nil || !proto.HasExtension(opts, plugin.E_Field) {
+	if opts == nil || !proto.HasExtension(opts, encoding.E_Field) {
 		return nil
 	}
 
-	ext := proto.GetExtension(opts, plugin.E_Field).(*plugin.EncodingFieldOptions)
+	ext := proto.GetExtension(opts, encoding.E_Field).(*encoding.EncodingFieldOptions)
 
 	return &MessageFieldExtension{ext}
 }
@@ -50,11 +51,11 @@ func GetMessageExtension(m proto.Message) MessageExtension {
 
 	opts, _ := m.(*descriptorpb.MessageOptions)
 
-	if opts == nil || !proto.HasExtension(opts, plugin.E_Options) {
+	if opts == nil || !proto.HasExtension(opts, encoding.E_Options) {
 		return MessageExtension{}
 	}
 
-	ext := proto.GetExtension(opts, plugin.E_Options).(*plugin.EncodingMessageOptions)
+	ext := proto.GetExtension(opts, encoding.E_Options).(*encoding.EncodingMessageOptions)
 
 	return MessageExtension{
 		GenerateEmpty:                  ext.GetGenerateEmpty(),
@@ -74,11 +75,11 @@ func GetMessageExtension(m proto.Message) MessageExtension {
 func GetEnumExtension(m proto.Message) *EnumExtension {
 
 	opts := m.(*descriptorpb.EnumOptions)
-	if opts == nil || !proto.HasExtension(opts, plugin.E_MessageOption) {
+	if opts == nil || !proto.HasExtension(opts, encoding.E_MessageOption) {
 		return nil
 	}
 
-	messageOption := proto.GetExtension(opts, plugin.E_MessageOption).(string)
+	messageOption := proto.GetExtension(opts, encoding.E_MessageOption).(string)
 
 	return &EnumExtension{messageOption}
 }
@@ -86,22 +87,22 @@ func GetEnumExtension(m proto.Message) *EnumExtension {
 func GetIsClientExtension(m proto.Message) bool {
 
 	opts := m.(*descriptorpb.ServiceOptions)
-	if opts == nil || !proto.HasExtension(opts, plugin.E_Client) {
+	if opts == nil || !proto.HasExtension(opts, client.E_Client) {
 		return false
 	}
 
-	ext := proto.GetExtension(opts, plugin.E_Client).(*plugin.ClientOptions)
+	ext := proto.GetExtension(opts, client.E_Client).(*client.ClientOptions)
 
 	return ext.GetIsClient()
 }
 func GetIsEndpointExtension(m proto.Message) bool {
 
 	opts := m.(*descriptorpb.ServiceOptions)
-	if opts == nil || !proto.HasExtension(opts, plugin.E_Client) {
+	if opts == nil || !proto.HasExtension(opts, client.E_Client) {
 		return false
 	}
 
-	ext := proto.GetExtension(opts, plugin.E_Client).(*plugin.ClientOptions)
+	ext := proto.GetExtension(opts, client.E_Client).(*client.ClientOptions)
 
 	return ext.GetIsEndpoint()
 }
@@ -109,22 +110,22 @@ func GetIsEndpointExtension(m proto.Message) bool {
 func GetIsRequestServiceExtension(m proto.Message) bool {
 
 	opts := m.(*descriptorpb.ServiceOptions)
-	if opts == nil || !proto.HasExtension(opts, plugin.E_Client) {
+	if opts == nil || !proto.HasExtension(opts, client.E_Client) {
 		return false
 	}
 
-	ext := proto.GetExtension(opts, plugin.E_Client).(*plugin.ClientOptions)
+	ext := proto.GetExtension(opts, client.E_Client).(*client.ClientOptions)
 	return ext.GetIsRequestService()
 }
 
 func GetIsRASServiceExtension(m proto.Message) bool {
 
 	opts := m.(*descriptorpb.ServiceOptions)
-	if opts == nil || !proto.HasExtension(opts, plugin.E_Client) {
+	if opts == nil || !proto.HasExtension(opts, client.E_Client) {
 		return false
 	}
 
-	ext := proto.GetExtension(opts, plugin.E_Client).(*plugin.ClientOptions)
+	ext := proto.GetExtension(opts, client.E_Client).(*client.ClientOptions)
 	return ext.GetIsRasService()
 }
 
@@ -139,11 +140,11 @@ type ClientMethodOptions struct {
 func GetClientMethodExtension(m proto.Message) ClientMethodOptions {
 
 	opts := m.(*descriptorpb.MethodOptions)
-	if opts == nil || !proto.HasExtension(opts, plugin.E_Method) {
+	if opts == nil || !proto.HasExtension(opts, client.E_Method) {
 		return ClientMethodOptions{}
 	}
 
-	ext := proto.GetExtension(opts, plugin.E_Method).(*plugin.ClientMethodOptions)
+	ext := proto.GetExtension(opts, client.E_Method).(*client.ClientMethodOptions)
 
 	return ClientMethodOptions{
 		NoPacketPack:    ext.GetNoPacketPack(),
@@ -161,11 +162,11 @@ type ClientMessageOptions struct {
 func GetClientMessageExtension(m proto.Message) ClientMessageOptions {
 
 	opts := m.(*descriptorpb.MessageOptions)
-	if opts == nil || !proto.HasExtension(opts, plugin.E_ClientOptions) {
+	if opts == nil || !proto.HasExtension(opts, encoding.E_ClientOptions) {
 		return ClientMessageOptions{}
 	}
 
-	ext := proto.GetExtension(opts, plugin.E_ClientOptions).(*plugin.ClientMessageOptions)
+	ext := proto.GetExtension(opts, encoding.E_ClientOptions).(*encoding.ClientMessageOptions)
 
 	return ClientMessageOptions{
 		IsImpl: ext.GetImpl(),
@@ -179,11 +180,11 @@ type FileImplOptions struct {
 func GetFileImplExtension(m proto.Message) FileImplOptions {
 
 	opts := m.(*descriptorpb.FileOptions)
-	if opts == nil || !proto.HasExtension(opts, plugin.E_Impl) {
+	if opts == nil || !proto.HasExtension(opts, encoding.E_Impl) {
 		return FileImplOptions{}
 	}
 
-	ext := proto.GetExtension(opts, plugin.E_Impl).(*plugin.FileImplOptions)
+	ext := proto.GetExtension(opts, encoding.E_Impl).(*encoding.FileImplOptions)
 
 	return FileImplOptions{
 		impl: ext.GetInterface(),

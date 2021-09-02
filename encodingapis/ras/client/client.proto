@@ -4,7 +4,7 @@ package ras.client;
 
 import "google/protobuf/descriptor.proto";
 
-option go_package = "github.com/v8platform/protoc-gen-go-ras/plugin";
+option go_package = "github.com/v8platform/protoc-gen-go-ras/plugin/ras/client";
 
 extend google.protobuf.ServiceOptions {
   ClientOptions client = 475223888;

@@ -5,7 +5,7 @@ package ras.encoding;
 import "google/protobuf/descriptor.proto";
 
 
-option go_package = "github.com/v8platform/protoc-gen-go-ras/plugin";
+option go_package = "github.com/v8platform/protoc-gen-go-ras/plugin/ras/encoding";
 
 extend google.protobuf.FileOptions {
   FileImplOptions impl = 475223888;
