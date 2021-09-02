@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package ras.messages.v1;
 
-import "ras.proto";
+import "ras/encoding/ras.proto";
 import "ras/serialize/v1/clusters.proto";
 
 option csharp_namespace = "ras.messages.v1";

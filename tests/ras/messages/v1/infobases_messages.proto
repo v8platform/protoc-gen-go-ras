@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package ras.messages.v1;
 
-import "ras.proto";
+import "ras/encoding/ras.proto";
 import "ras/messages/v1/types.proto";
 import "ras/serialize/v1/infobases.proto";
 import "ras/serialize/v1/sessions.proto";

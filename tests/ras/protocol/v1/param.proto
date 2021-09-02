@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package ras.protocol.v1;
 
-import "ras.proto";
+import "ras/encoding/ras.proto";
 
 option csharp_namespace = "ras.protocol.v1";
 option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen/ras/protocol/v1";

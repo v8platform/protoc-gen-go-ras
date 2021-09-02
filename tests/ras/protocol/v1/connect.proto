@@ -7,7 +7,7 @@ import "google/protobuf/descriptor.proto";
 import "ras/protocol/v1/param.proto";
 import "ras/protocol/v1/types.proto";
 import "ras/protocol/v1/packet.proto";
-import "ras.proto";
+import "ras/encoding/ras.proto";
 
 
 option csharp_namespace = "ras.protocol.v1";

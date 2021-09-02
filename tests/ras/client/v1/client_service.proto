@@ -5,8 +5,8 @@ import "google/protobuf/empty.proto";
 import "google/protobuf/any.proto";
 import "ras/protocol/v1/connect.proto";
 import "ras/protocol/v1/endpoint.proto";
-import "client.proto";
-import "ras.proto";
+import "ras/client/client.proto";
+import "ras/encoding/ras.proto";
 option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen/ras/client/v1";
 
 service ClientService {

@@ -4,7 +4,7 @@ package ras.client.v1;
 import "google/protobuf/empty.proto";
 import "ras/protocol/v1/endpoint.proto";
 import "ras/messages/v1/sessions_messages.proto";
-import "client.proto";
+import "ras/client/client.proto";
 option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen/ras/client/v1";
 
 service SessionsService {

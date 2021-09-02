@@ -3,7 +3,7 @@ syntax = "proto3";
 package ras.messages.v1;
 
 
-import "ras.proto";
+import "ras/encoding/ras.proto";
 import "google/protobuf/any.proto";
 
 option csharp_namespace = "ras.messages.v1";
