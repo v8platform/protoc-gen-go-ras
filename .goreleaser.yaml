@@ -36,8 +36,8 @@ dockers:
       - 'ghcr.io/v8platform/{{.ProjectName}}:{{ .Tag }}'
       - 'ghcr.io/v8platform/{{.ProjectName}}:v{{ .Major }}.{{ .Minor }}'
       - 'ghcr.io/v8platform/{{.ProjectName}}:latest'
-      - 'plugins.buf.build/v8platform/{{.ProjectName}}:{{ .Tag }}'
-      - 'plugins.buf.build/v8platform/{{.ProjectName}}:v{{ .Major }}.{{ .Minor }}'
+#      - 'plugins.buf.build/v8platform/{{.ProjectName}}:{{ .Tag }}'
+#      - 'plugins.buf.build/v8platform/{{.ProjectName}}:v{{ .Major }}.{{ .Minor }}'
     dockerfile: Dockerfile
     ids:
       - protoc-gen-go-ras
