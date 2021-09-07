@@ -12,5 +12,6 @@ extend google.protobuf.FileOptions {
 }
 
 message FileImplOptions {
+
     repeated string interface = 1;
 }
