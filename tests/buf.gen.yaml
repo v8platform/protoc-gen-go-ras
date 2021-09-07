@@ -9,12 +9,12 @@ managed:
 #      - googleapies/google/api
 
 plugins:
-#  - name: go
-#    out: ./gen
-#    opt: paths=source_relative
-#  - name: go-ras
-#    out: ./gen
-#    opt: paths=source_relative
   - name: go
     out: ./gen
     opt: paths=source_relative
+  - name: go-ras
+    out: ./gen
+    opt: paths=source_relative
+#  - name: go
+#    out: ./gen
+#    opt: paths=source_relative

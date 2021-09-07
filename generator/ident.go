@@ -10,7 +10,7 @@ const (
 	syncPackage        = protogen.GoImportPath("sync")
 	timePackage        = protogen.GoImportPath("time")
 	regexpPackage      = protogen.GoImportPath("regexp")
-	netPackage         = protogen.GoImportPath("net")
+	ctxPackage         = protogen.GoImportPath("context")
 	anypbPackage       = protogen.GoImportPath("google.golang.org/protobuf/types/known/anypb")
 	protoPackage       = protogen.GoImportPath("google.golang.org/protobuf/proto")
 	emptypbPackage     = protogen.GoImportPath("google.golang.org/protobuf/types/known/emptypb")

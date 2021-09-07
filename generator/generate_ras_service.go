@@ -96,8 +96,8 @@ func (m rasServiceGenerator) genProxyMethod(service *protogen.Service, method pr
 		m.g.P("//")
 		m.g.P(deprecationComment)
 	}
-	m.g.P("func (x *", serviceName, ") ", method.proxyName, "(req *", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error) {")
-	m.g.P("return x.", m.getServiceName(method.Parent), ".", method.GoName, "(req)")
+	m.g.P("func (x *", serviceName, ") ", method.proxyName, "(ctx ", ctxPackage.Ident("Context"), ", req *", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error) {")
+	m.g.P("return x.", m.getServiceName(method.Parent), ".", method.GoName, "(ctx, req)")
 	m.g.P("}")
 	m.g.P()
 }
@@ -107,7 +107,7 @@ func (m rasServiceGenerator) genImpl(service *protogen.Service) {
 	m.g.P("type ", m.getServiceImpl(service), " interface {")
 	for _, method := range m.idxMethods {
 		m.g.P("// ", method.proxyName, " proxy request ", m.getServiceName(method.Parent), ".", method.GoName)
-		m.g.P(method.proxyName, "(*", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error)")
+		m.g.P(method.proxyName, "(ctx ", ctxPackage.Ident("Context"), ", req *", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error)")
 	}
 	m.g.P()
 	m.g.P("}")

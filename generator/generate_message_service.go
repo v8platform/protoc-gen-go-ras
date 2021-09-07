@@ -42,7 +42,7 @@ func (m messageServiceGenerator) genImpl(service *protogen.Service) {
 
 	m.g.P("type ", m.getServiceImpl(service), " interface {")
 	for _, method := range service.Methods {
-		m.g.P(method.GoName, "(*", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error)")
+		m.g.P(method.GoName, "(ctx ", ctxPackage.Ident("Context"), ", req *", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error)")
 	}
 	m.g.P()
 	m.g.P("}")
@@ -84,7 +84,7 @@ func (m messageServiceGenerator) genMethodHandler(service *protogen.Service, met
 
 	endpointRequest := "EndpointRequest"
 
-	m.g.P("func (x *", m.getServiceName(service), ") ", method.GoName, "(req *", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error) {")
+	m.g.P("func (x *", m.getServiceName(service), ") ", method.GoName, "(ctx ", ctxPackage.Ident("Context"), ", req *", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error) {")
 	m.g.P()
 	m.g.P("var resp ", method.Output.GoIdent)
 	m.g.P()
@@ -98,7 +98,8 @@ func (m messageServiceGenerator) genMethodHandler(service *protogen.Service, met
 	m.g.P("Request: anyRequest,")
 	m.g.P("Respond: anyRespond,")
 	m.g.P("}")
-	m.g.P("response, err := x.e.Request(endpointRequest)")
+	m.g.P()
+	m.g.P("response, err := x.e.Request(ctx, endpointRequest)")
 	m.g.P("if err != nil { return nil, err }")
 	m.g.P()
 	m.g.P("if err := ", anypbPackage.Ident("UnmarshalTo"),

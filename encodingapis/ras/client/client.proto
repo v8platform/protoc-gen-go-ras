@@ -15,7 +15,6 @@ message ClientOptions {
   bool is_endpoint = 2;
   bool is_request_service = 3;
   bool is_ras_service = 4;
-  bool is_test = 5;
 }
 
 extend google.protobuf.MethodOptions {
