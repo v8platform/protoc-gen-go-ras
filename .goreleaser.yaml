@@ -2,7 +2,6 @@ project_name: protoc-gen-go-ras
 
 env:
   - GO111MODULE=on
-#  - GOPROXY=https://goproxy.io
 before:
   hooks:
     - go mod tidy
@@ -14,10 +13,8 @@ builds:
       - darwin
       - windows
     goarch:
-      #      - 386
       - amd64
-#      - arm
-#      - arm64
+
 dist: dist
 
 checksum:
@@ -32,12 +29,12 @@ changelog:
       - Merge branch
 dockers:
   - image_templates:
-      - 'khorevaa/{{.ProjectName}}:{{ .Tag }}'
-      - 'khorevaa/{{.ProjectName}}:v{{ .Major }}.{{ .Minor }}'
-      - 'khorevaa/{{.ProjectName}}:latest'
-#      - 'ghcr.io/khorevaa/{{.ProjectName}}:{{ .Tag }}'
-#      - 'ghcr.io/khorevaa/{{.ProjectName}}:v{{ .Major }}.{{ .Minor }}'
-#      - 'ghcr.io/khorevaa/{{.ProjectName}}:latest'
+      - 'v8platform/{{.ProjectName}}:{{ .Tag }}'
+      - 'v8platform/{{.ProjectName}}:v{{ .Major }}.{{ .Minor }}'
+      - 'v8platform/{{.ProjectName}}:latest'
+      - 'ghcr.io/v8platform/{{.ProjectName}}:{{ .Tag }}'
+      - 'ghcr.io/v8platform/{{.ProjectName}}:v{{ .Major }}.{{ .Minor }}'
+      - 'ghcr.io/v8platform/{{.ProjectName}}:latest'
       - 'plugins.buf.build/v8platform/{{.ProjectName}}:{{ .Tag }}'
       - 'plugins.buf.build/v8platform/{{.ProjectName}}:v{{ .Major }}.{{ .Minor }}'
       - 'plugins.buf.build/v8platform/{{.ProjectName}}:latest'
