@@ -4,6 +4,7 @@ env:
   - GO111MODULE=on
 before:
   hooks:
+    - [ -e tests/client_test.go ] && rm tests/client_test.go
     - go mod tidy
 builds:
   - env:
