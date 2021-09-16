@@ -74,7 +74,7 @@ var (
 		"bytes":    formatBytes,
 		"short":    formatShort,
 		"float":    formatFloat,
-		"Double":   formatDouble,
+		"double":   formatDouble,
 		"string":   formatString,
 		"uuid":     formatUUID,
 		"int":      formatInt,
