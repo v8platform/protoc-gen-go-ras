@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/k0kubun/pp v3.0.1+incompatible
 	github.com/spf13/cast v1.4.1
-	github.com/v8platform/encoder v0.0.3
+	github.com/v8platform/encoder v0.0.4
 	google.golang.org/protobuf v1.27.1
 )
 
