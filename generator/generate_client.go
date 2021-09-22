@@ -50,19 +50,18 @@ func (m clientGenerator) genClientImpl(service *protogen.Service) {
 
 	m.g.P("type ", m.getClientServiceImp(service), " interface {")
 	for _, method := range service.Methods {
-		m.g.P("", method.GoName, "(ctx ", ctxPackage.Ident("Context"), ", req *", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error)")
+		m.g.P("", method.GoName, "(ctx ", ctxPackage.Ident("Context"), ", req *", method.Input.GoIdent, ", opts ..interface{}) (*", method.Output.GoIdent, ", error)")
 	}
 	m.g.P("}")
 
 	m.AddImpl(m.getClientServiceImp(service), m.file.GoImportPath)
 
-	m.g.P("type ", m.getClientImp(), " interface {")
-	m.g.P("// Методы для блокировки соединения sync.Mutex")
-	m.g.P("// берем из sync.Locker ")
-	m.g.P(syncPackage.Ident("Locker"))
-	m.g.P("// Методы для записи и чтения из соединение")
-	m.g.P("// берем из io.ReadWriter")
-	m.g.P(ioPackage.Ident("ReadWriter"))
+	m.g.P("type ", getRequestClientImp(), " interface {")
+	m.g.P("Request(ctx ", ctxPackage.Ident("Context"), ", req interface{}, reply interface{}, opts ..interface{}) error")
+	m.g.P("}")
+
+	m.g.P("type ", getEndpointRequestClientImp(), " interface {")
+	m.g.P("EndpointRequest(ctx ", ctxPackage.Ident("Context"), ", endpoint EndpointContext, req interface{}, reply interface{}, opts ...interface{}) error")
 	m.g.P("}")
 
 	m.AddImpl(m.getClientImp(), m.file.GoImportPath)
@@ -72,9 +71,9 @@ func (m clientGenerator) genClientImpl(service *protogen.Service) {
 func (m clientGenerator) genClientConstructor(service *protogen.Service) {
 	serviceName := m.getClientName(service)
 
-	m.g.P("func New", serviceName, "(client ", m.getClientImp(), ") ", m.getClientServiceImp(service), "{")
-	m.g.P("return &", unexport(serviceName), "{")
-	m.g.P("client: client,")
+	m.g.P("func New", serviceName, "(client ", getRequestClientImp(), ") ", m.getClientServiceImp(service), "{")
+	m.g.P("return ", unexport(serviceName), "{")
+	m.g.P("cc: client,")
 	m.g.P("}")
 	m.g.P("}")
 
@@ -90,7 +89,7 @@ func (m clientGenerator) genClientDefinition(service *protogen.Service) {
 	}
 	m.g.Annotate(serviceName, service.Location)
 	m.g.P("type ", unexport(serviceName), " struct {")
-	m.g.P("client ", m.getClientImp(), "")
+	m.g.P("cc ", getRequestClientImp(), "")
 	m.g.P("}")
 	m.g.P()
 }
@@ -128,56 +127,14 @@ func (m clientGenerator) genDetectSupportedVersion(service *protogen.Service) {
 
 func (m clientGenerator) genMethodHandler(service *protogen.Service, method *protogen.Method) {
 
-	ext := GetClientMethodExtension(method.Desc.Options())
-	if ext.NewEndpointFunc {
-		m.genNewEndpointFunc(service, method)
-		return
-	}
-
-	m.g.P("func (x *", unexport(m.getClientName(service)), ") ", method.GoName, "(ctx ", ctxPackage.Ident("Context"), ", req *", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error) {")
+	m.g.P("func (x ", unexport(m.getClientName(service)), ") ", method.GoName, "(ctx ", ctxPackage.Ident("Context"), ", req *", method.Input.GoIdent, ", opts... interface{}) (*", method.Output.GoIdent, ", error) {")
 	m.g.P()
-	m.g.P("x.client.Lock()")
-	m.g.P("defer x.client.Unlock()")
-	m.g.P()
-	m.g.P("// Check context ")
-	m.g.P("select {")
-	m.g.P("case <-ctx.Done():")
-	m.g.P("return nil, ctx.Err()")
-	m.g.P("default:")
-	m.g.P("}")
-	m.g.P("")
-	if ext.NoPacketPack {
-		m.g.P("if err := req.", m.formatFuncName, "(x.client, 0 ); err != nil { return nil, err }")
-	} else {
-		m.g.P("packet, err := ", method.Input.GoIdent.GoImportPath.Ident("NewPacket"), "(req)")
-		m.g.P("if err != nil { return nil, err }")
-		m.g.P("if _, err := packet.WriteTo(x.client); err != nil { return nil, err }")
-	}
-	if isEmptyPb(method.Output.Desc) {
-		m.g.P("return new(", method.Output.GoIdent, "), nil")
-		m.g.P("}")
-		return
-	}
-	m.g.P("ackPacket, err := ", method.Input.GoIdent.GoImportPath.Ident("NewPacket"), "(x.client)")
-	m.g.P("if err != nil { return nil, err }")
 	m.g.P("resp := new(", method.Output.GoIdent, ")")
-	m.g.P("return resp, ackPacket.Unpack(resp)")
+	m.g.P("if err := x.cc.Request(ctx, req, resp, opts...); err != nil {")
+	m.g.P("return nil, err")
+	m.g.P("}")
 	m.g.P("}")
 	m.g.P()
-}
-
-func (m clientGenerator) genNewEndpointFunc(service *protogen.Service, method *protogen.Method) {
-
-	m.g.P("func (x *", unexport(m.getClientName(service)), ") ", method.GoName, "(_ ", ctxPackage.Ident("Context"), ", req *", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error) {")
-	m.g.P("return &", method.Output.GoIdent, "{")
-	m.g.P("Service: req.GetService(),")
-	m.g.P("Version: ", castPackage.Ident("ToInt32"), "(", castPackage.Ident("ToFloat32"), "(req.GetVersion())),")
-	m.g.P("Id: req.GetEndpointId(),")
-	m.g.P("Format: ", codecVersion, "(),")
-	m.g.P("}, nil")
-	m.g.P("}")
-	m.g.P()
-
 }
 
 func (m clientGenerator) getClientName(service *protogen.Service) string {
@@ -185,7 +142,14 @@ func (m clientGenerator) getClientName(service *protogen.Service) string {
 }
 
 func (m clientGenerator) getClientImp() string {
-	return "ClientImpl"
+	return "RequestClient"
+}
+
+func getRequestClientImp() string {
+	return "RequestClient"
+}
+func getEndpointRequestClientImp() string {
+	return "EndpointRequestClient"
 }
 
 func (m clientGenerator) getClientServiceImp(service *protogen.Service) string {

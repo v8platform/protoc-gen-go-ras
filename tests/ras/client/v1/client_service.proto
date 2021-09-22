@@ -23,21 +23,4 @@ service ClientService {
   rpc EndpointClose(protocol.v1.EndpointClose) returns (google.protobuf.Empty) {};
   rpc EndpointMessage(protocol.v1.EndpointMessage) returns (protocol.v1.EndpointMessage) {};
 
-  rpc NewEndpoint(protocol.v1.EndpointOpenAck) returns (protocol.v1.Endpoint) {
-      option(method).new_endpoint_func = true;
-  };
-
-}
-
-service EndpointService {
-
-  option(client).is_endpoint = true;
-
-  rpc Request(EndpointRequest) returns (google.protobuf.Any) {};
-
-}
-
-message EndpointRequest {
-  google.protobuf.Any request = 1;
-  google.protobuf.Any respond = 2;
 }

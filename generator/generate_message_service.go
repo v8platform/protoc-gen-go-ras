@@ -40,9 +40,11 @@ func (m messageServiceGenerator) genService(service *protogen.Service) {
 
 func (m messageServiceGenerator) genImpl(service *protogen.Service) {
 
+	endpointImpl := "EndpointServiceImpl"
+
 	m.g.P("type ", m.getServiceImpl(service), " interface {")
 	for _, method := range service.Methods {
-		m.g.P(method.GoName, "(ctx ", ctxPackage.Ident("Context"), ", req *", method.Input.GoIdent, ") (*", method.Output.GoIdent, ", error)")
+		m.g.P(method.GoName, "(ctx ", ctxPackage.Ident("Context"), ", req *", method.Input.GoIdent, ", opts... interface{}) (*", method.Output.GoIdent, ", error)")
 	}
 	m.g.P()
 	m.g.P("}")
