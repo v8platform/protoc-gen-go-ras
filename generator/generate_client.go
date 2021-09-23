@@ -50,19 +50,27 @@ func (m clientGenerator) genClientImpl(service *protogen.Service) {
 
 	m.g.P("type ", m.getClientServiceImp(service), " interface {")
 	for _, method := range service.Methods {
-		m.g.P("", method.GoName, "(ctx ", ctxPackage.Ident("Context"), ", req *", method.Input.GoIdent, ", opts ..interface{}) (*", method.Output.GoIdent, ", error)")
+		m.g.P("", method.GoName, "(ctx ", ctxPackage.Ident("Context"), ", req *", method.Input.GoIdent, ", opts ...interface{}) (*", method.Output.GoIdent, ", error)")
 	}
 	m.g.P("}")
-
+	m.g.P()
 	m.AddImpl(m.getClientServiceImp(service), m.file.GoImportPath)
 
-	m.g.P("type ", getRequestClientImp(), " interface {")
-	m.g.P("Request(ctx ", ctxPackage.Ident("Context"), ", req interface{}, reply interface{}, opts ..interface{}) error")
+	m.g.P("type Request func(ctx ", ctxPackage.Ident("Context"), ", handler RequestHandler, opts ...interface{}) error")
+	m.g.P()
+	m.g.P("type RequestHandler func(ctx ", ctxPackage.Ident("Context"), ", rw ", ioPackage.Ident("ReadWriter"), ") error")
+	m.g.P()
+	m.g.P("type ", getClientImp(), " interface {")
+	m.g.P("Request(ctx ", ctxPackage.Ident("Context"), ", handler RequestHandler, opts ...interface{}) error")
+	m.g.P("GetEndpoint(ctx ", ctxPackage.Ident("Context"), ") (Endpoint, error)")
 	m.g.P("}")
-
-	m.g.P("type ", getEndpointRequestClientImp(), " interface {")
-	m.g.P("EndpointRequest(ctx ", ctxPackage.Ident("Context"), ", endpoint EndpointContext, req interface{}, reply interface{}, opts ...interface{}) error")
+	m.g.P()
+	m.g.P()
+	m.g.P("type Endpoint interface {")
+	m.g.P(" GetVersion() int32 ")
+	m.g.P(" GetId() int32 ")
 	m.g.P("}")
+	m.g.P()
 
 	m.AddImpl(m.getClientImp(), m.file.GoImportPath)
 
@@ -71,7 +79,7 @@ func (m clientGenerator) genClientImpl(service *protogen.Service) {
 func (m clientGenerator) genClientConstructor(service *protogen.Service) {
 	serviceName := m.getClientName(service)
 
-	m.g.P("func New", serviceName, "(client ", getRequestClientImp(), ") ", m.getClientServiceImp(service), "{")
+	m.g.P("func New", serviceName, "(client ", getClientImp(), ") ", m.getClientServiceImp(service), "{")
 	m.g.P("return ", unexport(serviceName), "{")
 	m.g.P("cc: client,")
 	m.g.P("}")
@@ -89,7 +97,7 @@ func (m clientGenerator) genClientDefinition(service *protogen.Service) {
 	}
 	m.g.Annotate(serviceName, service.Location)
 	m.g.P("type ", unexport(serviceName), " struct {")
-	m.g.P("cc ", getRequestClientImp(), "")
+	m.g.P("cc ", getClientImp(), "")
 	m.g.P("}")
 	m.g.P()
 }
@@ -128,11 +136,20 @@ func (m clientGenerator) genDetectSupportedVersion(service *protogen.Service) {
 func (m clientGenerator) genMethodHandler(service *protogen.Service, method *protogen.Method) {
 
 	m.g.P("func (x ", unexport(m.getClientName(service)), ") ", method.GoName, "(ctx ", ctxPackage.Ident("Context"), ", req *", method.Input.GoIdent, ", opts... interface{}) (*", method.Output.GoIdent, ", error) {")
+	m.g.P("return ", m.getMethodHandlerName(method), "(ctx, x.cc.Request, req, opts...)")
+	m.g.P("}")
+	m.g.P()
+	m.g.P("func ", m.getMethodHandlerName(method), "(ctx ", ctxPackage.Ident("Context"), ", cc Request, req *", method.Input.GoIdent, ", opts... interface{}) (*", method.Output.GoIdent, ", error) {")
 	m.g.P()
 	m.g.P("resp := new(", method.Output.GoIdent, ")")
-	m.g.P("if err := x.cc.Request(ctx, req, resp, opts...); err != nil {")
+	if isEmptyPb(method.Output.Desc) {
+		m.g.P("if err := cc(ctx, ", method.Input.GoIdent.GoImportPath.Ident("PacketRequestHandler"), "(req, nil), opts...); err != nil {")
+	} else {
+		m.g.P("if err := cc(ctx, ", method.Input.GoIdent.GoImportPath.Ident("PacketRequestHandler"), "(req, resp), opts...); err != nil {")
+	}
 	m.g.P("return nil, err")
 	m.g.P("}")
+	m.g.P("return resp, nil")
 	m.g.P("}")
 	m.g.P()
 }
@@ -142,38 +159,19 @@ func (m clientGenerator) getClientName(service *protogen.Service) string {
 }
 
 func (m clientGenerator) getClientImp() string {
-	return "RequestClient"
+	return getClientImp()
 }
 
-func getRequestClientImp() string {
-	return "RequestClient"
-}
-func getEndpointRequestClientImp() string {
-	return "EndpointRequestClient"
+func getClientImp() string {
+	return "ClientImpl"
 }
 
 func (m clientGenerator) getClientServiceImp(service *protogen.Service) string {
 	return service.GoName + "Impl"
 }
 
-func (m clientGenerator) getClientOptionsName(service *protogen.Service) string {
-	return service.GoName + "Options"
-}
-
-func (m clientGenerator) getClientOptionName(service *protogen.Service) string {
-	return service.GoName + "Option"
-}
-
-func (m clientGenerator) getRemoteMockClientName(service *protogen.Service) string {
-	return service.GoName + "RemoteMockClient"
-}
-
-func (m clientGenerator) getMockServerBaseInterfaceName(service *protogen.Service) string {
-	return service.GoName + "Server"
-}
-
-func (m clientGenerator) getMockServiceDescriptorName(service *protogen.Service) string {
-	return "_" + service.GoName + "_MockServiceDesc"
+func (m clientGenerator) getMethodHandlerName(method *protogen.Method) string {
+	return method.GoName + "Handler"
 }
 
 func unexport(s string) string { return strings.ToLower(s[:1]) + s[1:] }

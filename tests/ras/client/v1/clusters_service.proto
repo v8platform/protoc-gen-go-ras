@@ -7,7 +7,7 @@ import "ras/messages/v1/clusters_messages.proto";
 import "ras/client/client.proto";
 option go_package = "github.com/v8platform/protoc-gen-go-ras/tests/gen/ras/client/v1";
 
-service ClustersService {
+service Clusters {
   option(client).is_request_service = true;
 
   rpc GetClusters(messages.v1.GetClustersRequest) returns (messages.v1.GetClustersResponse) {};
