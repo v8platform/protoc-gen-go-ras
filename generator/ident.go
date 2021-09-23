@@ -1,6 +1,9 @@
 package generator
 
-import "google.golang.org/protobuf/compiler/protogen"
+import (
+	"google.golang.org/protobuf/compiler/protogen"
+	"google.golang.org/protobuf/reflect/protoreflect"
+)
 
 const (
 	reflectPackage     = protogen.GoImportPath("reflect")
@@ -99,3 +102,7 @@ var (
 		"type":     parseType,
 	}
 )
+
+func isEmptyPb(m protoreflect.MessageDescriptor) bool {
+	return m.FullName() == "google.protobuf.Empty"
+}

@@ -161,7 +161,6 @@ func (gen *Generator) generateFile(file *protogen.File) {
 	gen.genHeader(g, string(file.GoPackageName))
 	gen.generateRas(file, g)
 	gen.generateClient(file, g)
-	gen.generateEndpoint(file, g)
 	gen.generateMessagesService(file, g)
 
 }
@@ -273,19 +272,6 @@ func (gen *Generator) generateClient(file *protogen.File, g *protogen.GeneratedF
 		return
 	}
 	generator := clientGenerator{
-		Generator: gen,
-		gen:       gen.plugin,
-		file:      file,
-		g:         g,
-	}
-	generator.GenerateFileContent()
-}
-
-func (gen *Generator) generateEndpoint(file *protogen.File, g *protogen.GeneratedFile) {
-	if len(file.Services) == 0 {
-		return
-	}
-	generator := endpointGenerator{
 		Generator: gen,
 		gen:       gen.plugin,
 		file:      file,

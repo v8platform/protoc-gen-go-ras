@@ -74,16 +74,16 @@ func (m rasServiceGenerator) getServiceImpl(service *protogen.Service) string {
 }
 
 func (m rasServiceGenerator) genService(service *protogen.Service) {
-
-	m.g.Unskip()
-
-	m.genImpl(service)
-	m.genConstructor(service)
-	m.genDefinition(service)
-
-	for _, method := range m.idxMethods {
-		m.genProxyMethod(service, method)
-	}
+	//
+	// m.g.Unskip()
+	//
+	// m.genImpl(service)
+	// m.genConstructor(service)
+	// m.genDefinition(service)
+	//
+	// for _, method := range m.idxMethods {
+	// 	m.genProxyMethod(service, method)
+	// }
 
 }
 

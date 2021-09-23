@@ -163,11 +163,11 @@ func (m clientGenerator) getClientImp() string {
 }
 
 func getClientImp() string {
-	return "ClientImpl"
+	return "Client"
 }
 
 func (m clientGenerator) getClientServiceImp(service *protogen.Service) string {
-	return service.GoName + "Impl"
+	return service.GoName
 }
 
 func (m clientGenerator) getMethodHandlerName(method *protogen.Method) string {

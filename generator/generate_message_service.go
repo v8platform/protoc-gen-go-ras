@@ -56,7 +56,7 @@ func (m messageServiceGenerator) genConstructor(service *protogen.Service) {
 	serviceName := m.getServiceName(service)
 
 	m.g.P("func New", serviceName, "(client ", getClientImp(), ") ", m.getServiceImpl(service), "{")
-	m.g.P("return &", serviceName, "{")
+	m.g.P("return &", unexport(serviceName), "{")
 	m.g.P("client,")
 	m.g.P("}")
 	m.g.P("}")
@@ -108,7 +108,7 @@ func (m messageServiceGenerator) getServiceName(service *protogen.Service) strin
 }
 
 func (m messageServiceGenerator) getServiceImpl(service *protogen.Service) string {
-	return service.GoName + "Service"
+	return service.GoName
 }
 
 func (m messageServiceGenerator) getClientOptionsName(service *protogen.Service) string {
