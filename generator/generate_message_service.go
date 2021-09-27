@@ -80,24 +80,40 @@ func (m messageServiceGenerator) genDefinition(service *protogen.Service) {
 
 func (m messageServiceGenerator) genMethodHandler(service *protogen.Service, method *protogen.Method) {
 
+	protocolv1 := m.ObjectNamed(".ras.protocol.v1.EndpointOpen").GoImportPath
+
 	m.g.P("func (x *", unexport(m.getServiceName(service)), ") ", method.GoName, "(ctx ", ctxPackage.Ident("Context"), ", req *", method.Input.GoIdent, ", opts... interface{}) (*", method.Output.GoIdent, ", error) {")
 	m.g.P()
-	m.g.P("endpoint, err := x.cc.GetEndpoint(ctx)")
+	m.g.P("reply, err := x.cc.Invoke(ctx, true, req, ", m.getMethodHandlerName(method), ", opts...)")
 	m.g.P("if err != nil { return nil, err }")
-	m.g.P("return ", m.getMethodHandlerName(method), "(ctx, x.cc.Request, endpoint, req, opts...)")
+	m.g.P("return reply.(*", method.Output.GoIdent, "), nil")
 	m.g.P("}")
 	m.g.P()
-	m.g.P("func ", m.getMethodHandlerName(method), "(ctx ", ctxPackage.Ident("Context"), ", cc Request, endpoint Endpoint, req *", method.Input.GoIdent, ", opts... interface{}) (*", method.Output.GoIdent, ", error) {")
+	m.g.P("func ", m.getMethodHandlerName(method), "(ctx ", ctxPackage.Ident("Context"), ", channel Channel, endpoint Endpoint, req interface{}, interceptor Interceptor) (interface{}, error) {")
 	m.g.P()
-	m.g.P("resp := new(", method.Output.GoIdent, ")")
+	m.g.P("if interceptor == nil {")
+	m.g.P("reply := new(", method.Output.GoIdent, ")")
 	if isEmptyPb(method.Output.Desc) {
-		m.g.P("if err := cc(ctx, ", m.ObjectNamed(".ras.protocol.v1.EndpointOpen").GoImportPath.Ident("EndpointRequestHandler"), "(endpoint, req, nil), opts...); err != nil {")
+		m.g.P("return reply, ", protocolv1.Ident("EndpointChannelRequest"), "(ctx, channel, endpoint, req.(*", method.Input.GoIdent, "), nil)")
 	} else {
-		m.g.P("if err := cc(ctx, ", m.ObjectNamed(".ras.protocol.v1.EndpointOpen").GoImportPath.Ident("EndpointRequestHandler"), "(endpoint, req, resp), opts...); err != nil {")
+		m.g.P("return reply, ", protocolv1.Ident("EndpointChannelRequest"), "(ctx, channel, endpoint, req.(*", method.Input.GoIdent, "), reply)")
 	}
-	m.g.P("return nil, err")
 	m.g.P("}")
-	m.g.P("return resp, nil")
+
+	m.g.P("info := &RequestInfo {")
+	m.g.P("Method : \"", method.GoName, "\",")
+	m.g.P("FullMethod : \"/", method.Desc.Parent().FullName(), "/", method.GoName, "\",")
+	m.g.P("}")
+	m.g.P("")
+	m.g.P("handler := func (ctx ", ctxPackage.Ident("Context"), ", cc Channel, endpoint Endpoint, req interface{}) (interface{}, error) {")
+	m.g.P("reply := new(", method.Output.GoIdent, ")")
+	if isEmptyPb(method.Output.Desc) {
+		m.g.P("return reply, ", protocolv1.Ident("EndpointChannelRequest"), "(ctx, cc, endpoint, req.(*", method.Input.GoIdent, "), nil)")
+	} else {
+		m.g.P("return reply, ", protocolv1.Ident("EndpointChannelRequest"), "(ctx, cc, endpoint, req.(*", method.Input.GoIdent, "), reply)")
+	}
+	m.g.P("}")
+	m.g.P("return interceptor(ctx, channel, endpoint, info, req, handler)")
 	m.g.P("}")
 	m.g.P()
 

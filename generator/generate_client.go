@@ -56,15 +56,18 @@ func (m clientGenerator) genClientImpl(service *protogen.Service) {
 	m.g.P()
 	m.AddImpl(m.getClientServiceImp(service), m.file.GoImportPath)
 
-	m.g.P("type Request func(ctx ", ctxPackage.Ident("Context"), ", handler RequestHandler, opts ...interface{}) error")
-	m.g.P()
-	m.g.P("type RequestHandler func(ctx ", ctxPackage.Ident("Context"), ", rw ", ioPackage.Ident("ReadWriter"), ") error")
-	m.g.P()
-	m.g.P("type ", getClientImp(), " interface {")
-	m.g.P("Request(ctx ", ctxPackage.Ident("Context"), ", handler RequestHandler, opts ...interface{}) error")
-	m.g.P("GetEndpoint(ctx ", ctxPackage.Ident("Context"), ") (Endpoint, error)")
+	m.g.P("type Channel interface {")
+	m.g.P("SendMsg(ctx ", ctxPackage.Ident("Context"), ", msg interface{}, opts ...interface{}) error")
+	m.g.P("RecvMsg(ctx ", ctxPackage.Ident("Context"), ", msg interface{}, opts ...interface{}) error")
 	m.g.P("}")
 	m.g.P()
+	m.g.P("type ", getClientImp(), " interface {")
+	m.g.P("Invoke(ctx ", ctxPackage.Ident("Context"), ", needEndpoint bool, req interface{}, handler InvokeHandler, opts ...interface{}) (interface{}, error)")
+	m.g.P("}")
+	m.g.P("")
+	m.g.P("type InvokeHandler func(ctx ", ctxPackage.Ident("Context"), ", channel Channel, endpoint Endpoint, req interface{}, interceptor Interceptor) (interface{}, error)")
+	m.g.P("type Interceptor func(ctx ", ctxPackage.Ident("Context"), ", channel Channel, endpoint Endpoint, info *RequestInfo, req interface{}, handler InterceptorHandler) (interface{}, error)")
+	m.g.P("type InterceptorHandler func(ctx ", ctxPackage.Ident("Context"), ", channel Channel, endpoint Endpoint, req interface{}) (interface{}, error)")
 	m.g.P()
 	m.g.P("type Endpoint interface {")
 	m.g.P(" GetVersion() int32 ")
@@ -98,6 +101,14 @@ func (m clientGenerator) genClientDefinition(service *protogen.Service) {
 	m.g.Annotate(serviceName, service.Location)
 	m.g.P("type ", unexport(serviceName), " struct {")
 	m.g.P("cc ", getClientImp(), "")
+	m.g.P("}")
+	m.g.P()
+
+	m.g.Annotate(serviceName, service.Location)
+	m.g.P("type RequestInfo struct {")
+	m.g.P("Method     string")
+	m.g.P("FullMethod string")
+	m.g.P("")
 	m.g.P("}")
 	m.g.P()
 }
@@ -135,21 +146,40 @@ func (m clientGenerator) genDetectSupportedVersion(service *protogen.Service) {
 
 func (m clientGenerator) genMethodHandler(service *protogen.Service, method *protogen.Method) {
 
+	protocolv1 := m.ObjectNamed(".ras.protocol.v1.EndpointOpen").GoImportPath
+
 	m.g.P("func (x ", unexport(m.getClientName(service)), ") ", method.GoName, "(ctx ", ctxPackage.Ident("Context"), ", req *", method.Input.GoIdent, ", opts... interface{}) (*", method.Output.GoIdent, ", error) {")
-	m.g.P("return ", m.getMethodHandlerName(method), "(ctx, x.cc.Request, req, opts...)")
+	m.g.P("reply, err := x.cc.Invoke(ctx, false, req, ", m.getMethodHandlerName(method), ", opts...)")
+	m.g.P("if err != nil { return nil, err }")
+	m.g.P("return reply.(*", method.Output.GoIdent, "), nil")
 	m.g.P("}")
 	m.g.P()
-	m.g.P("func ", m.getMethodHandlerName(method), "(ctx ", ctxPackage.Ident("Context"), ", cc Request, req *", method.Input.GoIdent, ", opts... interface{}) (*", method.Output.GoIdent, ", error) {")
+
+	m.g.P("func ", m.getMethodHandlerName(method), "(ctx ", ctxPackage.Ident("Context"), ", channel Channel, endpoint Endpoint, req interface{}, interceptor Interceptor) (interface{}, error) {")
 	m.g.P()
-	m.g.P("resp := new(", method.Output.GoIdent, ")")
+	m.g.P("if interceptor == nil {")
+	m.g.P("reply := new(", method.Output.GoIdent, ")")
 	if isEmptyPb(method.Output.Desc) {
-		m.g.P("if err := cc(ctx, ", method.Input.GoIdent.GoImportPath.Ident("PacketRequestHandler"), "(req, nil), opts...); err != nil {")
+		m.g.P("return reply, ", protocolv1.Ident("PacketChannelRequest"), "(ctx, channel, req.(*", method.Input.GoIdent, "), nil)")
 	} else {
-		m.g.P("if err := cc(ctx, ", method.Input.GoIdent.GoImportPath.Ident("PacketRequestHandler"), "(req, resp), opts...); err != nil {")
+		m.g.P("return reply, ", protocolv1.Ident("PacketChannelRequest"), "(ctx, channel, req.(*", method.Input.GoIdent, "), reply)")
 	}
-	m.g.P("return nil, err")
 	m.g.P("}")
-	m.g.P("return resp, nil")
+
+	m.g.P("info := &RequestInfo {")
+	m.g.P("Method : \"", method.GoName, "\",")
+	m.g.P("FullMethod : \"/", method.Desc.Parent().FullName(), "/", method.GoName, "\",")
+	m.g.P("}")
+	m.g.P("")
+	m.g.P("handler := func (ctx ", ctxPackage.Ident("Context"), ", cc Channel, endpoint Endpoint, req interface{}) (interface{}, error) {")
+	m.g.P("reply := new(", method.Output.GoIdent, ")")
+	if isEmptyPb(method.Output.Desc) {
+		m.g.P("return reply, ", protocolv1.Ident("PacketChannelRequest"), "(ctx, cc, req.(*", method.Input.GoIdent, "), nil)")
+	} else {
+		m.g.P("return reply, ", protocolv1.Ident("PacketChannelRequest"), "(ctx, cc, req.(*", method.Input.GoIdent, "), reply)")
+	}
+	m.g.P("}")
+	m.g.P("return interceptor(ctx, channel, endpoint, info, req, handler)")
 	m.g.P("}")
 	m.g.P()
 }
